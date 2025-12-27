@@ -364,7 +364,7 @@ Please extract the information and return ONLY a valid JSON object matching the 
                     # Save schema if template name provided
                     if template_name:
                         try:
-                            from supabase_service import get_supabase_service
+                            from .supabase_service import get_supabase_service
                             supabase = get_supabase_service()
                             supabase.save_form_schema(
                                 template_name=template_name,
@@ -529,7 +529,7 @@ class DocumentManager:
             db_path: Path to local db.json (deprecated, kept for backwards compatibility)
             use_supabase: If True, use Supabase for storage (default). Set to False to use local JSON.
         """
-        from supabase_service import get_supabase_service
+        from .supabase_service import get_supabase_service
 
         self.use_supabase = use_supabase
 
@@ -1171,7 +1171,7 @@ def setup_form_schemas():
     Returns:
         Dictionary with paths to saved schemas
     """
-    from supabase_service import get_supabase_service
+    from .supabase_service import get_supabase_service
 
     manager = DocumentManager()
     manager._init_parser()
@@ -1249,7 +1249,7 @@ def generate_form_schema_for_template(template_path: str, sample_instructions: s
     Returns:
         Dictionary with schema data
     """
-    from supabase_service import get_supabase_service
+    from .supabase_service import get_supabase_service
 
     manager = DocumentManager()
     manager._init_parser()
@@ -1283,21 +1283,21 @@ def generate_form_schema_for_template(template_path: str, sample_instructions: s
 
 def list_form_schemas() -> List[Dict]:
     """List all saved form schemas"""
-    from supabase_service import get_supabase_service
+    from .supabase_service import get_supabase_service
     supabase = get_supabase_service()
     return supabase.list_form_schemas()
 
 
 def get_form_schema(template_name: str) -> Optional[Dict]:
     """Get a specific form schema"""
-    from supabase_service import get_supabase_service
+    from .supabase_service import get_supabase_service
     supabase = get_supabase_service()
     return supabase.get_form_schema(template_name)
 
 
 def delete_form_schema(template_name: str) -> bool:
     """Delete a form schema"""
-    from supabase_service import get_supabase_service
+    from .supabase_service import get_supabase_service
     supabase = get_supabase_service()
     return supabase.delete_form_schema(template_name)
 

@@ -29,11 +29,13 @@ app = Flask(__name__,
 
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
 app.config['UPLOAD_FOLDER'] = Path(__file__).parent.parent / 'uploads'
+app.config['EXPORT_FOLDER'] = Path(__file__).parent.parent / 'export'
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'png', 'jpg', 'jpeg'}
 
-# Ensure upload folder exists
-app.config['UPLOAD_FOLDER'].mkdir(exist_ok=True)
+# Ensure necessary folders exist (important for Vercel serverless environment)
+app.config['UPLOAD_FOLDER'].mkdir(parents=True, exist_ok=True)
+app.config['EXPORT_FOLDER'].mkdir(parents=True, exist_ok=True)
 
 # Initialize Supabase service and document manager
 supabase = get_supabase_service()
@@ -750,4 +752,4 @@ def internal_error(error):
 # ============================================================================
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=8000)
+    app.run(debug=False, host='0.0.0.0', port=8000)
