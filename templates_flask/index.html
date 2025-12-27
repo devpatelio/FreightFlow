@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Logistics Manager{% endblock %}
+
+{% block content %}
+<h1>Dashboard</h1>
+
+<div class="stats-grid">
+    <div class="stat-card">
+        <h3>Products</h3>
+        <p class="stat-number">{{ stats.total_products }}</p>
+        <a href="{{ url_for('products_list') }}" class="btn btn-link">Manage Products</a>
+    </div>
+
+    <div class="stat-card">
+        <h3>Customers</h3>
+        <p class="stat-number">{{ stats.total_accounts }}</p>
+        <a href="{{ url_for('customers_list') }}" class="btn btn-link">Manage Customers</a>
+    </div>
+
+    <div class="stat-card">
+        <h3>Sellers</h3>
+        <p class="stat-number">{{ stats.total_sellers }}</p>
+        <a href="#" class="btn btn-link">Manage Sellers</a>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Recent Documents</h2>
+    {% if recent_docs %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Document Name</th>
+                <th>Type</th>
+                <th>Created</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for doc in recent_docs %}
+            <tr>
+                <td>{{ doc.document_id }}</td>
+                <td>{{ doc.document_name }}</td>
+                <td><span class="badge">{{ doc.document_type }}</span></td>
+                <td>{{ doc.created_at[:10] }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">No documents processed yet. Upload a PO to get started.</p>
+    {% endif %}
+</div>
+
+<div class="quick-actions">
+    <h2>Quick Actions</h2>
+    <div class="action-buttons">
+        <a href="{{ url_for('po_upload') }}" class="btn btn-primary">Upload Purchase Order</a>
+        <a href="{{ url_for('products_create') }}" class="btn btn-secondary">Add New Product</a>
+        <a href="{{ url_for('customers_create') }}" class="btn btn-secondary">Add New Customer</a>
+    </div>
+</div>
+{% endblock %}

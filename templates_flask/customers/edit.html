@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Customer - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Edit Customer</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('customers_edit', customer_id=customer.id) }}">
+        <div class="form-group">
+            <label for="company_name">Company Name *</label>
+            <input type="text" id="company_name" name="company_name" class="form-control" value="{{ customer.company_name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="customer_id">Customer ID *</label>
+            <input type="text" id="customer_id" name="customer_id" class="form-control" value="{{ customer.customer_id }}" required>
+            <small class="form-text">Unique identifier for this customer</small>
+        </div>
+
+        <div class="form-group">
+            <label for="payment_terms">Payment Terms</label>
+            <input type="text" id="payment_terms" name="payment_terms" class="form-control" value="{{ customer.default_payment_terms }}">
+        </div>
+
+        <div class="form-group">
+            <label for="delivery_terms">Delivery Terms</label>
+            <input type="text" id="delivery_terms" name="delivery_terms" class="form-control" value="{{ customer.default_delivery_terms }}">
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" rows="3">{{ customer.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Customer</button>
+            <a href="{{ url_for('customers_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

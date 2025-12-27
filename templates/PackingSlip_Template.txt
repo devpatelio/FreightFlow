@@ -1,0 +1,178 @@
+PACKING SLIP DOCUMENT FILLING PROMPT TEMPLATE
+==============================================
+
+You are an expert logistics document processor. Your task is to extract information from the provided source documents and fill out a Packing Slip form accurately and completely.
+
+## REQUIRED INFORMATION TO EXTRACT:
+
+### 1. DATES
+- Date: [Extract packing slip date or use current date]
+- Order Date: [Extract original order/PO date]
+- Packing Date: [Extract date items were packed, may be same as Date]
+
+### 2. IDENTIFICATION
+- Customer ID: [Extract customer identifier/account number]
+- Purchase Order Number: [Extract PO number]
+
+### 3. PEOPLE
+- Salesperson: [Extract sales representative name]
+- Checked By: [Extract name of person who verified packing]
+
+### 4. SHIPPING ADDRESSES
+
+#### Ship To Address (Primary destination)
+- Company Name: [Extract recipient company name]
+- Street Address: [Extract complete street address]
+- City: [Extract city]
+- State: [Extract state/province]
+- ZIP Code: [Extract postal code]
+- Country: [Extract country, default: USA]
+- Phone: [Extract phone number if available]
+
+#### Shipping Address (If different from Ship To)
+- Company Name: [Extract if different shipping location specified]
+- Street Address: [Extract complete street address]
+- City: [Extract city]
+- State: [Extract state/province]
+- ZIP Code: [Extract postal code]
+- Country: [Extract country]
+- Phone: [Extract phone number]
+
+Note: If shipping address is not explicitly different, leave as null.
+
+### 5. ITEMS (For each product/line item)
+For each item being shipped, extract:
+- Item Number: [Extract item/SKU/product code]
+- Product Description: [Extract detailed product description including specifications]
+- Quantity: [Extract quantity being shipped]
+- Unit: [Extract unit of measure: each, box, kg, lb, etc.]
+
+### 6. TOTALS
+- Total Quantity: [Calculate total quantity of all items]
+- Total Boxes/Packages: [Count total number of boxes/packages being shipped]
+
+### 7. NOTES
+- Special Notes: [Extract any handling instructions, special requirements, or important information]
+
+## OUTPUT FORMAT:
+
+Return the extracted information in valid JSON format matching the PackingSlip class structure:
+
+```json
+{
+  "date": "2024-12-26",
+  "order_date": "2024-12-20",
+  "packing_date": "2024-12-26",
+  "customer_id": "CUST-001",
+  "purchase_order": "PO-12345",
+  "salesperson": "John Smith",
+  "checked_by": "Jane Doe",
+  "ship_to": {
+    "name": "Customer Company Inc",
+    "address": "456 Oak Avenue",
+    "city": "Burlington",
+    "state": "WI",
+    "zip_code": "53105",
+    "country": "USA",
+    "phone": "262-806-7169",
+    "email": null
+  },
+  "shipping_address": null,
+  "items": [
+    {
+      "item_number": "ITEM-001",
+      "product_description": "Chemical Product XYZ - Industrial Grade, 99% purity",
+      "quantity": 2,
+      "unit": "IBC"
+    },
+    {
+      "item_number": "ITEM-002",
+      "product_description": "Additive ABC - 25kg bags",
+      "quantity": 10,
+      "unit": "bags"
+    }
+  ],
+  "total_quantity": 12,
+  "total_boxes": 12,
+  "special_notes": "Fragile - Handle with care. Keep away from heat sources."
+}
+```
+
+## EXTRACTION GUIDELINES:
+
+1. **Item Details**: 
+   - Extract complete product descriptions including grade, purity, specifications
+   - Include packaging information in the description (e.g., "25kg bags")
+   - Capture all technical specifications mentioned
+
+2. **Quantities**:
+   - Extract exact quantities being shipped
+   - Note the unit of measure (pieces, boxes, bags, IBCs, kg, lb, etc.)
+   - Calculate totals accurately
+
+3. **Date Handling**:
+   - Use ISO format (YYYY-MM-DD) for all dates
+   - If packing_date is not specified, use the same as date
+   - Order date should reflect when the order was originally placed
+
+4. **Customer Information**:
+   - Extract customer ID/account number exactly as shown
+   - Match PO number exactly from source document
+   - Verify salesperson name spelling
+
+5. **Shipping Addresses**:
+   - ship_to: Always extract the primary recipient/destination address
+   - shipping_address: Only populate if document explicitly shows a different shipping location
+   - Include complete address details (name, street, city, state, zip, country, phone)
+   - Look for phrases like "Ship To:", "Deliver To:", "Please Deliver To:", "Shipping Address:"
+   - If only one address is mentioned, put it in ship_to and leave shipping_address as null
+
+6. **Verification**:
+   - Include "Checked By" name if document shows who verified the packing
+   - Leave as null if not specified
+
+7. **Special Notes**:
+   - Extract ALL special instructions
+   - Include handling requirements (fragile, temperature, orientation)
+   - Include delivery requirements or restrictions
+   - Include regulatory or compliance notes
+
+8. **Totals Calculation**:
+   - total_quantity: Sum of all item quantities
+   - total_boxes: Count of total packages/containers being shipped
+   - Verify calculations are accurate
+
+## ITEM DESCRIPTION BEST PRACTICES:
+
+When extracting product descriptions, include:
+- Product name
+- Grade/Type (Industrial, Food Grade, Technical, etc.)
+- Purity/Concentration (if applicable)
+- Physical form (Liquid, Powder, Granular, etc.)
+- Packaging details (Bulk, Bottled, Bagged, etc.)
+- Any technical specifications mentioned
+- Certifications (if mentioned)
+
+Example good descriptions:
+- "Sodium Hydroxide - 50% Solution, Industrial Grade, in IBC containers"
+- "Polymer Resin XR-200 - White Powder, 99.5% purity, in 25kg paper bags"
+- "Lubricating Oil - SAE 10W-30, Synthetic Blend, in 208L drums"
+
+## VALIDATION CHECKS:
+
+Before submitting, verify:
+- [ ] All item numbers are present and correctly formatted
+- [ ] Product descriptions are complete and detailed
+- [ ] Quantities match source documents
+- [ ] Units are clearly specified for each item
+- [ ] Total quantity equals sum of individual quantities
+- [ ] Total boxes count is accurate
+- [ ] All dates are in correct format
+- [ ] Customer ID and PO number match source documents
+- [ ] Ship To address is complete and accurate
+- [ ] Shipping Address is only populated if explicitly different from Ship To
+- [ ] Special notes capture all important information
+
+## SOURCE DOCUMENTS TO PROCESS:
+[Insert Purchase Order, warehouse picking list, or other source materials here]
+

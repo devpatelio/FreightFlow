@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}View Documents - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Generated Documents</h1>
+</div>
+
+<div class="success-message">
+    <h2>✅ Documents generated successfully!</h2>
+    <p>Your BOL and Packing Slip have been generated and are ready to view or download.</p>
+</div>
+
+<div class="documents-grid">
+    {% if bol_file %}
+    <div class="document-card">
+        <h3>📄 Bill of Lading</h3>
+        <div class="document-info">
+            <p><strong>Filename:</strong> {{ bol_file }}</p>
+            <p><strong>Type:</strong> PDF Document</p>
+        </div>
+        <div class="pdf-preview">
+            <iframe src="{{ url_for('documents_preview', filename=bol_file) }}" 
+                    width="100%" 
+                    height="500px" 
+                    style="border: 1px solid #ddd; border-radius: 4px;">
+            </iframe>
+        </div>
+        <div class="document-actions">
+            <a href="{{ url_for('documents_preview', filename=bol_file) }}" 
+               class="btn btn-secondary" 
+               target="_blank">
+                Open in New Tab
+            </a>
+            <a href="{{ url_for('documents_download', filename=bol_file) }}" 
+               class="btn btn-primary">
+                Download BOL
+            </a>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if ps_file %}
+    <div class="document-card">
+        <h3>📦 Packing Slip</h3>
+        <div class="document-info">
+            <p><strong>Filename:</strong> {{ ps_file }}</p>
+            <p><strong>Type:</strong> PDF Document</p>
+        </div>
+        <div class="pdf-preview">
+            <iframe src="{{ url_for('documents_preview', filename=ps_file) }}" 
+                    width="100%" 
+                    height="500px" 
+                    style="border: 1px solid #ddd; border-radius: 4px;">
+            </iframe>
+        </div>
+        <div class="document-actions">
+            <a href="{{ url_for('documents_preview', filename=ps_file) }}" 
+               class="btn btn-secondary" 
+               target="_blank">
+                Open in New Tab
+            </a>
+            <a href="{{ url_for('documents_download', filename=ps_file) }}" 
+               class="btn btn-primary">
+                Download Packing Slip
+            </a>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<div class="next-actions">
+    <h3>What's next?</h3>
+    <div class="action-buttons">
+        <a href="{{ url_for('po_upload') }}" class="btn btn-secondary">Upload Another PO</a>
+        <a href="{{ url_for('index') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+<style>
+.pdf-preview {
+    margin: 15px 0;
+}
+
+.documents-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+@media (min-width: 1200px) {
+    .documents-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+</style>
+{% endblock %}

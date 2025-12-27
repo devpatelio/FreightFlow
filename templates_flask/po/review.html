@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block title %}Review PO Data - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Review Purchase Order Data</h1>
+</div>
+
+<div class="review-container">
+    <div class="section">
+        <h2>Original PO Information</h2>
+        <div class="info-grid">
+            <div class="info-item">
+                <strong>Document:</strong> {{ doc.document_name }}
+            </div>
+            <div class="info-item">
+                <strong>Parsed on:</strong> {{ doc.created_at[:19] }}
+            </div>
+            {% if customer %}
+            <div class="info-item">
+                <strong>Customer:</strong> {{ customer.company_name }} ({{ customer.customer_id }})
+            </div>
+            {% endif %}
+            <div class="info-item">
+                <strong>Document ID:</strong> {{ doc.document_id }}
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" action="{{ url_for('po_generate', doc_id=doc.document_id) }}" id="generateForm">
+        <div class="section">
+            <h2>Bill of Lading Data</h2>
+            <p class="help-text">Review and edit the extracted BOL data below. This data will be used to fill the BOL template.</p>
+            <div class="data-editor">
+                <textarea name="bol_data" rows="20" class="form-control code-editor" readonly>{{ bol_data }}</textarea>
+            </div>
+        </div>
+
+        <div class="section">
+            <h2>Packing Slip Data</h2>
+            <p class="help-text">Review and edit the extracted packing slip data below. This data will be used to fill the packing slip template.</p>
+            <div class="data-editor">
+                <textarea name="ps_data" rows="20" class="form-control code-editor" readonly>{{ ps_data }}</textarea>
+            </div>
+        </div>
+
+        <div class="info-box">
+            <p><strong>Note:</strong> The data above has been automatically extracted from your PO. When you click "Generate Documents", this data will be used to fill the BOL and Packing Slip templates.</p>
+        </div>
+
+        <div class="section">
+            <h2>Form Schema Options</h2>
+            <p class="help-text">Choose how to fill the PDF templates:</p>
+
+            <div class="schema-options">
+                <label class="schema-option">
+                    <input type="radio" name="use_schema" value="true" checked>
+                    <div class="option-content">
+                        <div class="option-header">
+                            <strong>Use Pre-Made Form Schema (Recommended)</strong>
+                            <span class="badge badge-success">3-5x Faster</span>
+                        </div>
+                        <p class="option-description">
+                            If form schemas exist for your templates, they will be used for faster, more consistent document generation.
+                            Schemas pre-define field locations, skipping detection and reducing processing time.
+                        </p>
+                        <div class="option-benefits">
+                            <span>✓ 3-5x faster processing</span>
+                            <span>✓ Consistent results</span>
+                            <span>✓ Lower API costs</span>
+                        </div>
+                    </div>
+                </label>
+
+                <label class="schema-option">
+                    <input type="radio" name="use_schema" value="false">
+                    <div class="option-content">
+                        <div class="option-header">
+                            <strong>Generate from Scratch</strong>
+                            <span class="badge badge-warning">Slower</span>
+                        </div>
+                        <p class="option-description">
+                            Detect fields and fill the form without using saved schemas.
+                            Use this if you don't have schemas yet or if you've recently updated your PDF templates.
+                        </p>
+                        <div class="option-benefits">
+                            <span>• Field detection included</span>
+                            <span>• No schema required</span>
+                            <span>• Takes 30-60 seconds</span>
+                        </div>
+                    </div>
+                </label>
+            </div>
+
+            <div class="schema-info-link">
+                <p>Don't have form schemas yet? <a href="{{ url_for('schemas_list') }}">Generate schemas for your templates</a> to speed up future document generation.</p>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-lg" id="generateBtn">
+                <span class="btn-text">Generate Documents</span>
+                <span class="btn-loading hidden">
+                    <span class="spinner"></span> Generating...
+                </span>
+            </button>
+            <a href="{{ url_for('po_upload') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-content">
+        <div class="spinner-large"></div>
+        <h3>Generating Documents...</h3>
+        <p>This may take 30-60 seconds depending on your schema settings.</p>
+        <div class="loading-steps">
+            <div class="step"> Extracting data from PO</div>
+            <div class="step active">⏳ Generating BOL...</div>
+            <div class="step">⏳ Generating Packing Slip...</div>
+            <div class="step">⏳ Filling templates...</div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('generateForm').addEventListener('submit', function(e) {
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.querySelector('.btn-text').classList.add('hidden');
+    btn.querySelector('.btn-loading').classList.remove('hidden');
+
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+
+    const steps = document.querySelectorAll('.loading-steps .step');
+    let currentStep = 1;
+
+    const stepInterval = setInterval(() => {
+        if (currentStep < steps.length) {
+            steps[currentStep - 1].classList.remove('active');
+            steps[currentStep - 1].innerHTML = '✓ ' + steps[currentStep - 1].textContent.replace('⏳ ', '');
+            steps[currentStep].classList.add('active');
+            currentStep++;
+        } else {
+            clearInterval(stepInterval);
+        }
+    }, 10000);
+});
+</script>
+{% endblock %}

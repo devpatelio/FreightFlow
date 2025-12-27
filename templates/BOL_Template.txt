@@ -1,0 +1,159 @@
+BILL OF LADING (BOL) DOCUMENT FILLING PROMPT TEMPLATE
+=====================================================
+
+You are an expert logistics document processor. Your task is to extract information from the provided source documents and fill out a Bill of Lading (BOL) form accurately and completely.
+
+## REQUIRED INFORMATION TO EXTRACT:
+
+### 1. BOL IDENTIFICATION
+- BOL Number: [Extract or generate: YearMonthSequence format]
+- BOL Date: [Extract date or use current date]
+
+### 2. SHIP FROM ADDRESS (Shipper)
+- Company Name: [Extract shipper/seller company name]
+- Street Address: [Extract complete street address]
+- City: [Extract city]
+- State: [Extract state/province]
+- ZIP Code: [Extract postal code]
+- Country: [Extract country, default: USA]
+- Phone: [Extract phone number if available]
+- Email: [Extract email if available]
+
+### 3. SHIP TO ADDRESS (Consignee)
+- Company Name: [Extract buyer/receiver company name]
+- Street Address: [Extract complete street address]
+- City: [Extract city]
+- State: [Extract state/province]
+- ZIP Code: [Extract postal code]
+- Country: [Extract country, default: USA]
+- Phone: [Extract phone number if available]
+- Email: [Extract email if available]
+
+### 4. THIRD PARTY FREIGHT CHARGES BILL TO (if applicable)
+- Company Name: [Extract if third party billing]
+- Street Address: [Extract complete street address]
+- City: [Extract city]
+- State: [Extract state/province]
+- ZIP Code: [Extract postal code]
+- Country: [Extract country]
+- Phone: [Extract phone number]
+
+### 5. CARRIER INFORMATION
+- Carrier Name: [Extract carrier/warehouse name]
+- Trailer Number: [Extract if available]
+- Seal Number: [Extract if available]
+
+### 6. ORDER DETAILS (For each order/line item)
+For each product/order, extract:
+- Customer ID: [Extract customer identifier]
+- PO Number: [Extract purchase order number]
+- Sales Order Number: [Generate/Extract in format: YearMonthBOLNumber]
+- Material/Product Name: [Extract product name]
+- Number of Packages: [Extract quantity of IBCs/drums/pallets]
+- Package Type: [IBC, Drum, Pallet, Box]
+- Weight: [Extract total weight]
+- Weight Unit: [kg or lb]
+- Country of Origin: [Extract or default to USA]
+- Customer PO#: [Extract customer's PO reference if different]
+- Additional Shipper Info: [Extract any special handling/shipping notes]
+
+### 7. PRODUCT DETAILS (For each product)
+For each product listed:
+- Product Name: [Extract product name]
+- Product Description: [Extract detailed description]
+- Item Number: [Extract item/SKU number]
+- UN Code: [Extract UN hazmat code if hazardous material]
+- Handling Unit Quantity: [Extract number of IBCs/containers]
+- Handling Unit Type: [IBC, Drum, Pallet]
+- Package/Weight Quantity: [Extract weight value]
+- Package/Weight Unit: [kg or lb]
+
+### 8. FINANCIAL INFORMATION
+- COD Amount: [Extract Cash on Delivery amount if applicable, otherwise null]
+- Freight Charges: [Extract if specified]
+
+### 9. SPECIAL INSTRUCTIONS
+- Special Instructions: [Extract any handling, delivery, or routing instructions]
+- Hazmat Information: [Extract if product is hazardous material]
+- Temperature Requirements: [Extract if temperature-controlled shipping]
+
+## OUTPUT FORMAT:
+
+Return the extracted information in valid JSON format matching the BillOfLading class structure:
+
+```json
+{
+  "bol_number": "202412001",
+  "bol_date": "2024-12-26",
+  "ship_from": {
+    "name": "Company Name",
+    "address": "123 Main St",
+    "city": "City",
+    "state": "ST",
+    "zip_code": "12345",
+    "country": "USA",
+    "phone": "123-456-7890",
+    "email": "contact@company.com"
+  },
+  "ship_to": {
+    "name": "Customer Company",
+    "address": "456 Oak Ave",
+    "city": "City",
+    "state": "ST",
+    "zip_code": "67890",
+    "country": "USA",
+    "phone": "098-765-4321",
+    "email": "customer@company.com"
+  },
+  "bill_to": null,
+  "products": [
+    {
+      "name": "Product Name",
+      "description": "Detailed product description",
+      "item_number": "ITEM-001",
+      "un_code": "UN1234",
+      "handling_unit": {
+        "quantity": 2,
+        "type": "IBC"
+      },
+      "package": {
+        "quantity": 1000,
+        "type": "kg"
+      },
+      "weight": 1000.0
+    }
+  ],
+  "orders": [
+    {
+      "customer_id": "CUST-001",
+      "po_number": "PO-12345",
+      "sales_order_number": "202412BOL001",
+      "material_name": "Product Name",
+      "num_packages": 2,
+      "weight": 1000.0,
+      "weight_unit": "kg",
+      "country_of_origin": "USA",
+      "customer_po": "CUST-PO-001",
+      "additional_shipper_info": "Handle with care"
+    }
+  ],
+  "carrier_name": "Main Warehouse",
+  "cod_amount": null,
+  "special_instructions": "Deliver between 8 AM - 5 PM"
+}
+```
+
+## EXTRACTION GUIDELINES:
+
+1. **Be Precise**: Extract exact values as they appear in source documents
+2. **Default Values**: Use sensible defaults (e.g., USA for country) when information is missing
+3. **Date Formats**: Use ISO format (YYYY-MM-DD) for all dates
+4. **Units**: Clearly identify whether weights are in kg or lb
+5. **Multiple Items**: Create separate entries for each product/order
+6. **Concatenation**: For Sales Order Number, concatenate Year + Month + BOL Number
+7. **Validation**: Ensure all required fields are populated
+8. **Null Handling**: Use null for optional fields that have no data
+
+## SOURCE DOCUMENTS TO PROCESS:
+[Insert Purchase Order, shipping documents, or other source materials here]
+

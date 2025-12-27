@@ -1,0 +1,322 @@
+{% extends "base.html" %}
+
+{% block title %}{{ customer.company_name }} - Customer Details{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>{{ customer.company_name }}</h1>
+        <p class="subtitle">Customer ID: {{ customer.customer_id }}</p>
+    </div>
+    <div class="actions-bar">
+        <a href="{{ url_for('customers_list') }}" class="btn btn-secondary">← Back to Customers</a>
+        <a href="{{ url_for('customers_edit', customer_id=customer.customer_id) }}" class="btn btn-primary">Edit Customer</a>
+    </div>
+</div>
+
+<div class="customer-detail-grid">
+    <!-- Company Information -->
+    <div class="section">
+        <h2>Company Information</h2>
+        <table class="info-table">
+            <tr>
+                <th>Company Name:</th>
+                <td><strong>{{ customer.company_name }}</strong></td>
+            </tr>
+            <tr>
+                <th>Customer ID:</th>
+                <td><code class="inline-code">{{ customer.customer_id }}</code></td>
+            </tr>
+            <tr>
+                <th>Payment Terms:</th>
+                <td>{{ customer.default_payment_terms }}</td>
+            </tr>
+            <tr>
+                <th>Delivery Terms:</th>
+                <td>{{ customer.default_delivery_terms }}</td>
+            </tr>
+            {% if customer.notes %}
+            <tr>
+                <th>Notes:</th>
+                <td>{{ customer.notes }}</td>
+            </tr>
+            {% endif %}
+            <tr>
+                <th>Created:</th>
+                <td>{{ customer.created_at[:10] if customer.created_at else 'N/A' }}</td>
+            </tr>
+            <tr>
+                <th>Last Updated:</th>
+                <td>{{ customer.updated_at[:10] if customer.updated_at else 'N/A' }}</td>
+            </tr>
+        </table>
+    </div>
+
+    <!-- Document Statistics -->
+    <div class="section">
+        <h2>Document Summary</h2>
+        <div class="doc-stats">
+            <div class="doc-stat-item">
+                <span class="doc-stat-number">{{ customer.total_pos }}</span>
+                <span class="doc-stat-label">Purchase Orders</span>
+            </div>
+            <div class="doc-stat-item">
+                <span class="doc-stat-number">{{ customer.total_bols }}</span>
+                <span class="doc-stat-label">Bills of Lading</span>
+            </div>
+            <div class="doc-stat-item">
+                <span class="doc-stat-number">{{ customer.total_packing_slips }}</span>
+                <span class="doc-stat-label">Packing Slips</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Purchase Orders with Related Documents -->
+<div class="section">
+    <div class="section-header">
+        <h2>Purchase Orders & Generated Documents ({{ customer.total_pos }})</h2>
+    </div>
+
+    {% if customer.pos_with_related %}
+    <div class="po-groups">
+        {% for group in customer.pos_with_related %}
+        <div class="po-group">
+            <!-- Purchase Order -->
+            <div class="po-header">
+                <div class="po-info">
+                    <h3>
+                        <span class="badge badge-primary">PO</span>
+                        {{ group.po.document_name }}
+                    </h3>
+                    <div class="po-meta">
+                        <span><strong>Doc ID:</strong> <code class="inline-code">{{ group.po.document_id }}</code></span>
+                        <span><strong>Status:</strong> <span class="badge badge-{{ 'success' if group.po.status == 'processed' else 'warning' }}">{{ group.po.status }}</span></span>
+                        <span><strong>Date:</strong> {{ group.po.created_at[:10] if group.po.created_at else 'N/A' }}</span>
+                    </div>
+                </div>
+                <div class="po-actions">
+                    {% if group.po.file_path %}
+                    <a href="{{ url_for('documents_file', doc_id=group.po.document_id) }}" target="_blank" class="btn btn-sm btn-secondary">View PDF</a>
+                    {% endif %}
+                    <a href="{{ url_for('po_review', doc_id=group.po.document_id) }}" class="btn btn-sm btn-primary">Review/Generate</a>
+                </div>
+            </div>
+
+            <!-- Related Documents -->
+            {% if group.bols or group.packing_slips %}
+            <div class="related-docs">
+                <h4>Generated Documents:</h4>
+                <div class="related-docs-grid">
+                    <!-- Bills of Lading -->
+                    {% for bol in group.bols %}
+                    <div class="related-doc">
+                        <div class="doc-icon">📄</div>
+                        <div class="doc-details">
+                            <div class="doc-type-badge">
+                                <span class="badge badge-info">BOL</span>
+                            </div>
+                            <div class="doc-name">{{ bol.document_name }}</div>
+                            <div class="doc-meta">
+                                <span>Doc ID: <code class="inline-code">{{ bol.document_id }}</code></span>
+                                <span>{{ bol.created_at[:10] if bol.created_at else 'N/A' }}</span>
+                            </div>
+                            <div class="doc-actions">
+                                {% if bol.file_path %}
+                                <a href="{{ url_for('documents_file', doc_id=bol.document_id) }}" target="_blank" class="btn btn-xs btn-secondary">View</a>
+                                <a href="{{ url_for('documents_file', doc_id=bol.document_id) }}?download=1" class="btn btn-xs btn-primary">Download</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    <!-- Packing Slips -->
+                    {% for ps in group.packing_slips %}
+                    <div class="related-doc">
+                        <div class="doc-icon">📦</div>
+                        <div class="doc-details">
+                            <div class="doc-type-badge">
+                                <span class="badge badge-success">Packing Slip</span>
+                            </div>
+                            <div class="doc-name">{{ ps.document_name }}</div>
+                            <div class="doc-meta">
+                                <span>Doc ID: <code class="inline-code">{{ ps.document_id }}</code></span>
+                                <span>{{ ps.created_at[:10] if ps.created_at else 'N/A' }}</span>
+                            </div>
+                            <div class="doc-actions">
+                                {% if ps.file_path %}
+                                <a href="{{ url_for('documents_file', doc_id=ps.document_id) }}" target="_blank" class="btn btn-xs btn-secondary">View</a>
+                                <a href="{{ url_for('documents_file', doc_id=ps.document_id) }}?download=1" class="btn btn-xs btn-primary">Download</a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="related-docs-empty">
+                <p>No documents generated yet. <a href="{{ url_for('po_review', doc_id=group.po.document_id) }}">Generate BOL & Packing Slip</a></p>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state-small">
+        <p>No purchase orders found for this customer.</p>
+        <a href="{{ url_for('po_upload') }}" class="btn btn-primary">Upload First PO</a>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.po-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.po-group {
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    background: white;
+}
+
+.po-header {
+    background: #f8f9fa;
+    padding: 20px;
+    border-bottom: 2px solid #e0e0e0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+}
+
+.po-info h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.po-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 14px;
+    color: #666;
+    flex-wrap: wrap;
+}
+
+.po-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.related-docs {
+    padding: 20px;
+}
+
+.related-docs h4 {
+    margin: 0 0 16px 0;
+    font-size: 15px;
+    color: #666;
+    font-weight: 600;
+}
+
+.related-docs-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+}
+
+.related-doc {
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 16px;
+    display: flex;
+    gap: 12px;
+    background: #fafafa;
+    transition: all 0.2s;
+}
+
+.related-doc:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+}
+
+.doc-icon {
+    font-size: 32px;
+    line-height: 1;
+}
+
+.doc-details {
+    flex: 1;
+    min-width: 0;
+}
+
+.doc-type-badge {
+    margin-bottom: 6px;
+}
+
+.doc-name {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 6px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.doc-meta {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.doc-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.related-docs-empty {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+}
+
+.badge-info {
+    background-color: #17a2b8;
+    color: white;
+}
+
+.btn-xs {
+    padding: 4px 10px;
+    font-size: 12px;
+}
+
+@media (max-width: 768px) {
+    .po-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .po-actions {
+        width: 100%;
+    }
+
+    .related-docs-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Product - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Edit Product</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('products_edit', product_id=product.id) }}">
+        <div class="form-group">
+            <label for="name">Product Name *</label>
+            <input type="text" id="name" name="name" class="form-control" value="{{ product.name }}" required>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description *</label>
+            <textarea id="description" name="description" class="form-control" rows="3" required>{{ product.description }}</textarea>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="item_number">Item Number</label>
+                <input type="text" id="item_number" name="item_number" class="form-control" value="{{ product.item_number or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="un_code">UN Code</label>
+                <input type="text" id="un_code" name="un_code" class="form-control" value="{{ product.un_code or '' }}">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="unit_type">Unit Type *</label>
+                <select id="unit_type" name="unit_type" class="form-control" required>
+                    {% for unit in unit_types %}
+                    <option value="{{ unit }}" {% if unit == product.default_unit_type.value %}selected{% endif %}>{{ unit }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="handling_unit_type">Handling Unit Type *</label>
+                <select id="handling_unit_type" name="handling_unit_type" class="form-control" required>
+                    {% for unit in unit_types %}
+                    <option value="{{ unit }}" {% if unit == product.default_handling_unit_type.value %}selected{% endif %}>{{ unit }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" rows="3">{{ product.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Product</button>
+            <a href="{{ url_for('products_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

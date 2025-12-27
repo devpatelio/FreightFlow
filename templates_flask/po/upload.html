@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Upload Purchase Order - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Upload Purchase Order</h1>
+</div>
+
+<p class="help-text">Upload a purchase order document to automatically generate BOL and Packing Slip documents. Supported formats: PDF, PNG, JPG, JPEG (max 16MB).</p>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('po_upload') }}" enctype="multipart/form-data">
+        <div class="form-group">
+            <label for="customer_id">Select Customer *</label>
+            <select id="customer_id" name="customer_id" class="form-control" required>
+                <option value="">-- Select a customer --</option>
+                {% for customer in customers %}
+                <option value="{{ customer.id }}">{{ customer.company_name }} ({{ customer.customer_id }})</option>
+                {% endfor %}
+            </select>
+            <small class="form-text">
+                {% if not customers %}
+                    <span style="color: #dc3545;">No customers available. <a href="{{ url_for('customers_create') }}">Create a customer first</a></span>
+                {% else %}
+                    Select the customer associated with this purchase order.
+                {% endif %}
+            </small>
+        </div>
+
+        <div class="form-group">
+            <label for="po_file">Upload PO File *</label>
+            <input type="file" id="po_file" name="po_file" class="form-control" accept=".pdf,.png,.jpg,.jpeg" required>
+            <small class="form-text">Accepted formats: PDF, PNG, JPG, JPEG (Max 16MB)</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" {% if not customers %}disabled{% endif %} id="uploadBtn">
+                <span class="btn-text">Upload and Process</span>
+                <span class="btn-loading" style="display: none;">
+                    <span class="spinner"></span> Processing...
+                </span>
+            </button>
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loadingOverlay" style="display: none;">
+    <div class="loading-content">
+        <div class="spinner-large"></div>
+        <h3>Processing Purchase Order...</h3>
+        <p>Uploading and parsing your document. This may take 20-40 seconds.</p>
+    </div>
+</div>
+
+<style>
+#loadingOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-content {
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    text-align: center;
+    max-width: 500px;
+}
+
+.spinner-large {
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    width: 60px;
+    height: 60px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+.spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid #fff;
+    border-top: 2px solid transparent;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.btn-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+</style>
+
+<script>
+document.querySelector('form').addEventListener('submit', function(e) {
+    const fileInput = document.getElementById('po_file');
+    if (!fileInput.files.length) {
+        alert('Please select a file to upload');
+        e.preventDefault();
+        return;
+    }
+    
+    // Show loading state on button
+    const btn = document.getElementById('uploadBtn');
+    btn.disabled = true;
+    btn.querySelector('.btn-text').style.display = 'none';
+    btn.querySelector('.btn-loading').style.display = 'flex';
+    
+    // Show loading overlay
+    document.getElementById('loadingOverlay').style.display = 'flex';
+});
+</script>
+{% endblock %}

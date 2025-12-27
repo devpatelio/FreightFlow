@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}{% if editing %}Edit {{ template_name }}{% else %}Templates{% endif %} - Logistics Manager{% endblock %}
+
+{% block content %}
+{% if editing %}
+    <div class="page-header">
+        <h1>Edit Template: {{ template_name }}</h1>
+    </div>
+
+    <div class="form-container template-editor">
+        <form method="POST" action="{{ url_for('templates_edit', template_name=template_name) }}">
+            <div class="form-group">
+                <label for="content">Template Content</label>
+                <textarea id="content" name="content" class="form-control template-content" rows="25">{{ content }}</textarea>
+                <small class="form-text">Be careful when editing templates as they affect document generation.</small>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">Save Template</button>
+                <a href="{{ url_for('templates_list') }}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+{% else %}
+    <div class="page-header">
+        <h1>Templates</h1>
+    </div>
+
+    <p class="help-text">Edit the template files used for document generation. These templates guide the AI in extracting and generating BOL and Packing Slip data.</p>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Template Name</th>
+                <th>File Size</th>
+                <th>Last Modified</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for template in templates %}
+            <tr>
+                <td><strong>{{ template.name }}</strong></td>
+                <td>{{ (template.size / 1024) | round(2) }} KB</td>
+                <td>{{ template.modified }}</td>
+                <td class="actions">
+                    <a href="{{ url_for('templates_edit', template_name=template.name) }}" class="btn btn-sm">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+{% endblock %}

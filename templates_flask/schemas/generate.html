@@ -1,0 +1,107 @@
+{% extends "base.html" %}
+
+{% block title %}Generate Form Schema - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Generate Form Schema</h1>
+        <p class="subtitle">Create a new form schema for faster document generation</p>
+    </div>
+</div>
+
+<div class="section">
+    <h2>Schema Configuration</h2>
+    <form method="POST">
+        <div class="form-group">
+            <label for="template_name">Template File *</label>
+            <select id="template_name" name="template_name" required class="form-control">
+                <option value="">-- Select Template --</option>
+                {% for template in templates %}
+                <option value="{{ template }}">{{ template }}</option>
+                {% endfor %}
+            </select>
+            <small class="form-text">Select the PDF template to generate a schema for</small>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <input type="text"
+                   id="description"
+                   name="description"
+                   class="form-control"
+                   placeholder="e.g., Bill of Lading form schema">
+            <small class="form-text">Optional: Describe what this schema is for</small>
+        </div>
+
+        <div class="form-group">
+            <label for="sample_instructions">Sample Instructions *</label>
+            <textarea id="sample_instructions"
+                      name="sample_instructions"
+                      rows="10"
+                      required
+                      class="form-control"
+                      placeholder="Fill with:
+- Field 1: Sample value 1
+- Field 2: Sample value 2
+- Field 3: Sample value 3"></textarea>
+            <small class="form-text">
+                Provide sample filling instructions. The AI will use these to detect all fields in the form.
+                Include examples for each type of field you want to detect.
+            </small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="generateSchemaBtn">
+                <span class="btn-text">Generate Schema</span>
+                <span class="btn-loading hidden">
+                    <span class="spinner"></span> Generating...
+                </span>
+            </button>
+            <a href="{{ url_for('schemas_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay hidden">
+    <div class="loading-content">
+        <div class="spinner-large"></div>
+        <h3>Generating Form Schema...</h3>
+        <p>Analyzing template and detecting fields. This may take 20-30 seconds.</p>
+    </div>
+</div>
+
+<script>
+const form = document.querySelector('form');
+form.addEventListener('submit', function(e) {
+    const btn = document.getElementById('generateSchemaBtn');
+    btn.disabled = true;
+    btn.querySelector('.btn-text').classList.add('hidden');
+    btn.querySelector('.btn-loading').classList.remove('hidden');
+    document.getElementById('loadingOverlay').classList.remove('hidden');
+});
+</script>
+
+<div class="info-card">
+    <h3>Tips for Sample Instructions</h3>
+    <ul>
+        <li>Include at least one example value for each field in your form</li>
+        <li>Use realistic data that matches the expected format (dates, numbers, addresses, etc.)</li>
+        <li>The AI will analyze the template and your sample data to detect all fillable fields</li>
+        <li>Generated schemas can be reused for all future fills of the same template</li>
+    </ul>
+
+    <h4>Example for BOL Template:</h4>
+    <pre class="code-block">Fill with:
+- BOL Number: 202412001
+- Ship From: Hanson Chemicals, 123 Main St, Brampton, ON L6Y 5E9
+- Ship To: Acme Corp, 456 Oak Ave, Milwaukee, WI 53204
+- Carrier: ABC Trucking
+- Product: Silicone Oil D350
+- Quantity: 2 IBC
+- Weight: 1000 kg
+- Date: 2024-12-26</pre>
+</div>
+
+{% endblock %}
+

@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Form Schemas - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1>Form Schemas</h1>
+        <p class="subtitle">Pre-define field locations for faster, more consistent PDF form filling</p>
+    </div>
+    <div class="actions-bar">
+        <a href="{{ url_for('schemas_generate') }}" class="btn btn-primary">+ Generate New Schema</a>
+        <form method="POST" action="{{ url_for('schemas_setup') }}" style="display: inline;">
+            <button type="submit" class="btn btn-secondary">Setup Default Schemas</button>
+        </form>
+    </div>
+</div>
+
+{% if schemas %}
+<div class="section">
+    <div class="schema-stats">
+        <div class="stat-item">
+            <span class="stat-value">{{ schemas|length }}</span>
+            <span class="stat-label">Schemas</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-value">{{ schemas|sum(attribute='num_fields') }}</span>
+            <span class="stat-label">Total Fields</span>
+        </div>
+    </div>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Template</th>
+                <th>Fields</th>
+                <th>Description</th>
+                <th>Created</th>
+                <th class="actions">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for schema in schemas %}
+            <tr>
+                <td><strong>{{ schema.template_name }}</strong></td>
+                <td><span class="badge badge-info">{{ schema.num_fields }} fields</span></td>
+                <td class="description-cell">{{ schema.description or 'No description' }}</td>
+                <td>{{ schema.created_at[:10] }}</td>
+                <td class="actions">
+                    <a href="{{ url_for('schemas_view', template_name=schema.template_name) }}"
+                       class="btn btn-sm btn-secondary">View</a>
+                    <form method="POST"
+                          action="{{ url_for('schemas_delete', template_name=schema.template_name) }}"
+                          style="display: inline;"
+                          onsubmit="return confirm('Are you sure you want to delete this schema?');">
+                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-state">
+    <svg class="empty-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+    </svg>
+    <h3>No Form Schemas Yet</h3>
+    <p>Form schemas speed up document generation by 3-5x and ensure consistent results.</p>
+    <p>Get started by generating schemas for your templates.</p>
+    <div class="empty-actions">
+        <a href="{{ url_for('schemas_generate') }}" class="btn btn-primary btn-lg">Generate Your First Schema</a>
+        <form method="POST" action="{{ url_for('schemas_setup') }}" style="display: inline;">
+            <button type="submit" class="btn btn-secondary btn-lg">Auto-Setup All Templates</button>
+        </form>
+    </div>
+</div>
+{% endif %}
+
+<div class="info-card">
+    <h3>About Form Schemas</h3>
+    <div class="info-grid-2col">
+        <div>
+            <h4>What are form schemas?</h4>
+            <p>Form schemas define exactly where form fields are located in a PDF, what type they are, and how they should be filled. Instead of relying on field detection each time, you provide the field definitions upfront.</p>
+        </div>
+        <div>
+            <h4>Why use them?</h4>
+            <ul>
+                <li><strong>Speed:</strong> 3-5x faster by skipping field detection</li>
+                <li><strong>Consistency:</strong> Deterministic results across thousands of fills</li>
+                <li><strong>Cost:</strong> Lower API usage by reducing processing steps</li>
+            </ul>
+        </div>
+    </div>
+
+    <h4>Recommended Workflow</h4>
+    <div class="workflow-steps">
+        <div class="workflow-step">
+            <span class="step-number">1</span>
+            <div class="step-content">
+                <strong>Generate Schema</strong>
+                <p>Run the generation once to let the system detect all fields</p>
+            </div>
+        </div>
+        <div class="workflow-step">
+            <span class="step-number">2</span>
+            <div class="step-content">
+                <strong>Save & Reuse</strong>
+                <p>The schema is automatically saved and used for all future fills</p>
+            </div>
+        </div>
+        <div class="workflow-step">
+            <span class="step-number">3</span>
+            <div class="step-content">
+                <strong>Update When Needed</strong>
+                <p>Regenerate schemas only if your PDF templates change</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
