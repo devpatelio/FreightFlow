@@ -28,14 +28,28 @@ app = Flask(__name__,
             static_folder='../static')
 
 app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
-app.config['UPLOAD_FOLDER'] = Path(__file__).parent.parent / 'uploads'
-app.config['EXPORT_FOLDER'] = Path(__file__).parent.parent / 'export'
+
+# Use /tmp for serverless environments (Vercel), local paths for development
+if os.getenv('VERCEL'):
+    # Vercel serverless environment - use /tmp (ephemeral)
+    app.config['UPLOAD_FOLDER'] = Path('/tmp/uploads')
+    app.config['EXPORT_FOLDER'] = Path('/tmp/export')
+else:
+    # Local development - use project directories
+    app.config['UPLOAD_FOLDER'] = Path(__file__).parent.parent / 'uploads'
+    app.config['EXPORT_FOLDER'] = Path(__file__).parent.parent / 'export'
+
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max upload
 app.config['ALLOWED_EXTENSIONS'] = {'pdf', 'png', 'jpg', 'jpeg'}
 
-# Ensure necessary folders exist (important for Vercel serverless environment)
-app.config['UPLOAD_FOLDER'].mkdir(parents=True, exist_ok=True)
-app.config['EXPORT_FOLDER'].mkdir(parents=True, exist_ok=True)
+# Ensure necessary folders exist (safe for both local and serverless)
+try:
+    app.config['UPLOAD_FOLDER'].mkdir(parents=True, exist_ok=True)
+    app.config['EXPORT_FOLDER'].mkdir(parents=True, exist_ok=True)
+except (OSError, PermissionError) as e:
+    # In read-only environments, folders may not be creatable
+    # This is okay - they'll be created when needed in /tmp
+    print(f"Note: Could not create folders at startup: {e}")
 
 # Initialize Supabase service and document manager
 supabase = get_supabase_service()
@@ -50,6 +64,14 @@ def allowed_file(filename):
     """Check if file extension is allowed"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+
+def ensure_dir(directory):
+    """Ensure directory exists, creating it if necessary"""
+    try:
+        Path(directory).mkdir(parents=True, exist_ok=True)
+    except (OSError, PermissionError):
+        pass  # Directory might already exist or be in read-only filesystem
 
 
 # ============================================================================
@@ -337,6 +359,7 @@ def po_upload():
                 unique_filename = f"{timestamp}_{filename}"
 
                 # Save temporarily for processing
+                ensure_dir(app.config['UPLOAD_FOLDER'])  # Ensure directory exists
                 filepath = app.config['UPLOAD_FOLDER'] / unique_filename
                 file.save(filepath)
 
