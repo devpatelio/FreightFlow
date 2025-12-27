@@ -5,7 +5,7 @@ Main entry point for processing Purchase Orders and generating shipping document
 """
 
 from pathlib import Path
-from backend import DocumentManager, process_purchase_order
+from .backend import DocumentManager, process_purchase_order
 import json
 
 

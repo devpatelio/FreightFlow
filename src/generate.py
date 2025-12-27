@@ -13,7 +13,7 @@ from pathlib import Path
 import sys
 sys.path.insert(0, str(Path(__file__).parent / 'src'))
 
-from backend import (
+from .backend import (
     DocumentManager,
     generate_filled_bol,
     generate_filled_packing_slip,

@@ -11,9 +11,9 @@ import json
 from datetime import datetime
 
 # Import Supabase service
-from supabase_service import get_supabase_service
+from .supabase_service import get_supabase_service
 
-from backend import (
+from .backend import (
     DocumentManager,
     generate_form_schema_for_template,
     list_form_schemas,
@@ -21,7 +21,7 @@ from backend import (
     delete_form_schema,
     setup_form_schemas
 )
-from modules import Account, SavedProduct, Address, Buyer, UnitType, Country
+from .modules import Account, SavedProduct, Address, Buyer, UnitType, Country
 
 app = Flask(__name__,
             template_folder='../templates_flask',

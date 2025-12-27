@@ -9,7 +9,7 @@ import os
 import uuid
 from typing import Optional, List, Dict
 from datetime import datetime
-from modules import Account, SavedProduct, SellerInfo, Buyer, SalesPerson, Address
+from .modules import Account, SavedProduct, SellerInfo, Buyer, SalesPerson, Address
 
 
 class DataStore:
