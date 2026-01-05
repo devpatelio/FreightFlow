@@ -308,8 +308,10 @@ class SupabaseService:
 
         if result.data:
             schema_data = result.data[0]
-            # Parse JSON schema
-            schema_data['schema'] = json.loads(schema_data['schema'])
+            # Parse JSON schema if it's a string (Supabase JSONB columns auto-parse)
+            if isinstance(schema_data['schema'], str):
+                schema_data['schema'] = json.loads(schema_data['schema'])
+            # If it's already a list/dict, use as-is
             return schema_data
 
         return None
@@ -323,9 +325,11 @@ class SupabaseService:
 
         schemas = result.data or []
 
-        # Parse JSON schemas
+        # Parse JSON schemas if they're strings (Supabase JSONB columns auto-parse)
         for schema in schemas:
-            schema['schema'] = json.loads(schema['schema'])
+            if isinstance(schema['schema'], str):
+                schema['schema'] = json.loads(schema['schema'])
+            # If it's already a list/dict, use as-is
 
         return schemas
 
