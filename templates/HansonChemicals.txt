@@ -19,7 +19,6 @@ Phone Number: 4164578271
 
 
 
-
 Your job is to take Purchase Orders and fill in the relevant fields to generate Bill of lading and packing slip documents. It is imperative you focus on accuracy, 
 simplicity, and pass in all the necessary information without hallucinating. If you are unsure about some information, please don't assume and simply just provide a 
 USER_FILL as a response. 

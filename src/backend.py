@@ -194,6 +194,9 @@ class Client:
         with open(template_path, 'r') as f:
             template_prompt = f.read()
         
+        print(f"✓ Loaded template prompt from: {template_path}")
+        print(f"  Template size: {len(template_prompt)} characters")
+        
         # Load company context
         context_path = Path('templates/HansonChemicals.txt')
         if not context_path.exists():
@@ -202,12 +205,27 @@ class Client:
         with open(context_path, 'r') as f:
             company_context = f.read()
         
+        print(f"✓ Loaded company context from: {context_path}")
+        print(f"  Context size: {len(company_context)} characters")
+        
         # Extract text content from parsed PO
         po_text = self._extract_text_from_parsed_data(parsed_po_data)
         
+        # Get current date for BOL number generation
+        from datetime import datetime
+        current_date = datetime.now()
+        date_info = f"""
+CURRENT DATE INFORMATION (use this for BOL number generation):
+- Today's Date: {current_date.strftime('%Y-%m-%d')}
+- BOL Number Format: {current_date.strftime('%Y%m%d')}XXX (where XXX is a 3-digit sequence starting from 001)
+- Example BOL Number for today: {current_date.strftime('%Y%m%d')}001
+"""
+        
         # Construct the full prompt
         system_message = f"{company_context}\n\n{template_prompt}"
-        user_message = f"""Here is the Purchase Order data to process:
+        user_message = f"""{date_info}
+
+Here is the Purchase Order data to process:
 
 {po_text}
 
@@ -394,27 +412,57 @@ Please extract the information and return ONLY a valid JSON object matching the 
             print(f"✗ Error filling template: {str(e)}")
             raise
     
+    def _wrap_text(self, text: str, width: int = 60) -> str:
+        """
+        Wrap text to fit within PDF form fields by adding line breaks
+
+        Args:
+            text: Text to wrap
+            width: Maximum characters per line (default: 60)
+
+        Returns:
+            Text with line breaks added
+        """
+        if not text or len(str(text)) <= width:
+            return str(text)
+
+        import textwrap
+        # Wrap text at word boundaries, preserving existing line breaks
+        text = str(text)
+        lines = text.split('\n')
+        wrapped_lines = []
+
+        for line in lines:
+            if len(line) <= width:
+                wrapped_lines.append(line)
+            else:
+                # Wrap long lines
+                wrapped = textwrap.fill(line, width=width, break_long_words=False, break_on_hyphens=False)
+                wrapped_lines.append(wrapped)
+
+        return '\n'.join(wrapped_lines)
+
     def _data_to_instructions(self, data: Dict) -> str:
         """
         Convert structured data dictionary to natural language instructions
-        
+
         Args:
             data: Dictionary with document data (BOL or PackingSlip format)
-        
+
         Returns:
             Natural language filling instructions
         """
         instructions = []
-        
+
         # Recursively process the data
         def process_dict(d, prefix=""):
             for key, value in d.items():
                 if value is None:
                     continue
-                    
+
                 field_name = key.replace('_', ' ').title()
                 full_key = f"{prefix}{field_name}" if prefix else field_name
-                
+
                 if isinstance(value, dict):
                     process_dict(value, f"{full_key} - ")
                 elif isinstance(value, list):
@@ -424,12 +472,14 @@ Please extract the information and return ONLY a valid JSON object matching the 
                     else:
                         instructions.append(f"- {full_key}: {', '.join(str(v) for v in value)}")
                 else:
-                    instructions.append(f"- {full_key}: {value}")
-        
+                    # Wrap long text values to prevent PDF field overflow
+                    wrapped_value = self._wrap_text(value, width=60)
+                    instructions.append(f"- {full_key}: {wrapped_value}")
+
         instructions.append("Fill this form with the following information:")
         instructions.append("")
         process_dict(data)
-        
+
         return "\n".join(instructions)
     
     def _download_document(self, url: str, save_path: str):

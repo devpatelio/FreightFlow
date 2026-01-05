@@ -6,8 +6,8 @@ You are an expert logistics document processor. Your task is to extract informat
 ## REQUIRED INFORMATION TO EXTRACT:
 
 ### 1. BOL IDENTIFICATION
-- BOL Number: [Extract or generate: YearMonthSequence format]
-- BOL Date: [Extract date or use current date]
+- BOL Number: [Generate using format: YYYYMMDD followed by a 3-digit sequence number, e.g., 20241226001. Use TODAY'S DATE for YYYYMMDD portion]
+- BOL Date: [Extract date or use current date in YYYY-MM-DD format]
 
 ### 2. SHIP FROM ADDRESS (Shipper)
 - Company Name: [Extract shipper/seller company name]
@@ -47,7 +47,7 @@ You are an expert logistics document processor. Your task is to extract informat
 For each product/order, extract:
 - Customer ID: [Extract customer identifier]
 - PO Number: [Extract purchase order number]
-- Sales Order Number: [Generate/Extract in format: YearMonthBOLNumber]
+- Sales Order Number: [Generate/Extract - typically same as BOL Number or in format: YYYYMMDDXXX]
 - Material/Product Name: [Extract product name]
 - Number of Packages: [Extract quantity of IBCs/drums/pallets]
 - Package Type: [IBC, Drum, Pallet, Box]
@@ -83,7 +83,7 @@ Return the extracted information in valid JSON format matching the BillOfLading 
 
 ```json
 {
-  "bol_number": "202412001",
+  "bol_number": "20241226001",
   "bol_date": "2024-12-26",
   "ship_from": {
     "name": "Company Name",
@@ -127,7 +127,7 @@ Return the extracted information in valid JSON format matching the BillOfLading 
     {
       "customer_id": "CUST-001",
       "po_number": "PO-12345",
-      "sales_order_number": "202412BOL001",
+      "sales_order_number": "20241226001",
       "material_name": "Product Name",
       "num_packages": 2,
       "weight": 1000.0,
@@ -150,7 +150,7 @@ Return the extracted information in valid JSON format matching the BillOfLading 
 3. **Date Formats**: Use ISO format (YYYY-MM-DD) for all dates
 4. **Units**: Clearly identify whether weights are in kg or lb
 5. **Multiple Items**: Create separate entries for each product/order
-6. **Concatenation**: For Sales Order Number, concatenate Year + Month + BOL Number
+6. **Date-Based Numbering**: BOL Number and Sales Order Number should use YYYYMMDD format based on TODAY'S DATE
 7. **Validation**: Ensure all required fields are populated
 8. **Null Handling**: Use null for optional fields that have no data
 

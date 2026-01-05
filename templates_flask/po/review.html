@@ -114,12 +114,12 @@
     <div class="loading-content">
         <div class="spinner-large"></div>
         <h3>Generating Documents...</h3>
-        <p>This may take 30-60 seconds depending on your schema settings.</p>
+        <p id="loadingMessage">This may take 30-60 seconds depending on your schema settings.</p>
         <div class="loading-steps">
-            <div class="step"> Extracting data from PO</div>
+            <div class="step">✓ Extracting data from PO</div>
             <div class="step active">⏳ Generating BOL...</div>
             <div class="step">⏳ Generating Packing Slip...</div>
-            <div class="step">⏳ Filling templates...</div>
+            <div class="step">⏳ Uploading to Supabase...</div>
         </div>
     </div>
 </div>
@@ -131,9 +131,22 @@ document.getElementById('generateForm').addEventListener('submit', function(e) {
     btn.querySelector('.btn-text').classList.add('hidden');
     btn.querySelector('.btn-loading').classList.remove('hidden');
 
-    document.getElementById('loadingOverlay').classList.remove('hidden');
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    loadingOverlay.classList.remove('hidden');
 
     const steps = document.querySelectorAll('.loading-steps .step');
+    const useSchema = document.querySelector('input[name="use_schema"]:checked').value === 'true';
+    const loadingMessage = document.getElementById('loadingMessage');
+
+    // Update message based on schema selection
+    if (useSchema) {
+        loadingMessage.textContent = 'Using pre-made schemas for faster generation (10-15 seconds)...';
+    } else {
+        loadingMessage.textContent = 'Detecting fields and generating from scratch (30-60 seconds)...';
+    }
+
+    // Faster step progression for schema-based generation
+    const stepDuration = useSchema ? 2500 : 8000; // 2.5s with schema, 8s without
     let currentStep = 1;
 
     const stepInterval = setInterval(() => {
@@ -145,7 +158,20 @@ document.getElementById('generateForm').addEventListener('submit', function(e) {
         } else {
             clearInterval(stepInterval);
         }
-    }, 10000);
+    }, stepDuration);
+
+    // Safety: Clear interval and show completion message if page doesn't redirect
+    setTimeout(() => {
+        clearInterval(stepInterval);
+        // Mark all remaining steps as complete
+        steps.forEach(step => {
+            step.classList.remove('active');
+            if (!step.textContent.startsWith('✓')) {
+                step.innerHTML = '✓ ' + step.textContent.replace('⏳ ', '');
+            }
+        });
+        loadingMessage.textContent = 'Complete! Redirecting...';
+    }, useSchema ? 12000 : 50000); // 12s with schema, 50s without
 });
 </script>
 {% endblock %}
