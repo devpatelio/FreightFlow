@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block title %}Addresses - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Addresses</h1>
+    <a href="{{ url_for('addresses_create') }}" class="btn btn-primary">Add New Address</a>
+</div>
+
+<h2>Seller/Company Addresses</h2>
+{% if seller_addresses %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Label</th>
+            <th>Company Name</th>
+            <th>Address</th>
+            <th>City/State/Zip</th>
+            <th>Country</th>
+            <th>Type</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for address in seller_addresses %}
+        <tr>
+            <td>
+                <strong>{{ address.label or 'No Label' }}</strong>
+                {% if address.is_default %}<span class="badge badge-success">Default</span>{% endif %}
+            </td>
+            <td>{{ address.name }}</td>
+            <td>{{ address.address }}</td>
+            <td>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</td>
+            <td><span class="badge">{{ address.country }}</span></td>
+            <td>{{ address.address_type }}</td>
+            <td class="actions">
+                <a href="{{ url_for('addresses_edit', address_id=address.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                <form method="POST" action="{{ url_for('addresses_delete', address_id=address.id) }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('Are you sure you want to delete this address?');">
+                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-state">No seller addresses yet. <a href="{{ url_for('addresses_create') }}">Create your first address</a></p>
+{% endif %}
+
+<h2 style="margin-top: 2rem;">Customer Addresses</h2>
+{% if customer_addresses %}
+<table class="data-table">
+    <thead>
+        <tr>
+            <th>Label</th>
+            <th>Customer</th>
+            <th>Address</th>
+            <th>City/State/Zip</th>
+            <th>Country</th>
+            <th>Type</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for address in customer_addresses %}
+        <tr>
+            <td>
+                <strong>{{ address.label or address.name }}</strong>
+                {% if address.is_default %}<span class="badge badge-success">Default</span>{% endif %}
+            </td>
+            <td>{{ address.customer.company_name if address.customer else 'N/A' }}</td>
+            <td>{{ address.address }}</td>
+            <td>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</td>
+            <td><span class="badge">{{ address.country }}</span></td>
+            <td>{{ address.address_type }}</td>
+            <td class="actions">
+                <a href="{{ url_for('addresses_edit', address_id=address.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                <form method="POST" action="{{ url_for('addresses_delete', address_id=address.id) }}"
+                      style="display:inline;"
+                      onsubmit="return confirm('Are you sure you want to delete this address?');">
+                    <button type="submit" class="btn btn-sm btn-danger">Delete</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<p class="empty-state">No customer addresses yet.</p>
+{% endif %}
+{% endblock %}

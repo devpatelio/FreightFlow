@@ -160,7 +160,7 @@ class Client:
         self.engine = openai.OpenAI(api_key=openai_api_key or os.getenv("OPENAI_API_KEY"))
         if not self.engine:
             raise ValueError("OPENAI_API_KEY not found in environment variables")
-        self.model = "gpt-4.1-2025-04-14"
+        self.model = "gpt-5-2025-08-07"
     
     def upload_file(self, file_path: Path):
         try:
@@ -239,7 +239,6 @@ Please extract the information and return ONLY a valid JSON object matching the 
                     {"role": "system", "content": system_message},
                     {"role": "user", "content": user_message}
                 ],
-                temperature=0.1,  # Low temperature for accuracy
                 response_format={"type": "json_object"}  # Force JSON output
             )
             
@@ -324,7 +323,7 @@ Please extract the information and return ONLY a valid JSON object matching the 
     def fill_template_document(self, template_file_id: str, fill_data: Dict,
                               form_schema: Optional[List[Dict]] = None,
                               save_path: Optional[str] = None,
-                              enable_overflow_pages: bool = True,
+                              enable_overflow_pages: bool = False,
                               template_name: Optional[str] = None) -> Dict:
         """
         Fill a template document with data using Reducto Edit
@@ -347,11 +346,32 @@ Please extract the information and return ONLY a valid JSON object matching the 
             # Build edit options
             edit_options = {
                 "enable_overflow_pages": enable_overflow_pages,
-                "llm_provider_preference": "openai"
+                "llm_provider_preference": "openai", 
+                "color": "#000000"
             }
+
+            # If caller didn't pass a schema but we have a template_name, try to load the saved schema
+            # from Supabase. This prevents "No schema provided" runs which are inconsistent.
+            if (not form_schema) and template_name:
+                try:
+                    from .supabase_service import get_supabase_service
+                    supabase = get_supabase_service()
+                    schema_data = supabase.get_form_schema(template_name)
+                    if schema_data and schema_data.get("schema"):
+                        form_schema = schema_data.get("schema")
+                        print(f"✓ Loaded form schema from Supabase in fill_template_document ({schema_data.get('num_fields')} fields)")
+                except Exception as e:
+                    # Non-fatal; we'll fall back to detection
+                    print(f"⚠ Could not load form schema from Supabase in fill_template_document: {e}")
 
             # Call Reducto Edit API
             if form_schema:
+                # For Packing Slip: deterministically prefill schema values so critical header-row
+                # fields (ORDER DATE / ORDER # / PURCHASE ORDER # / CUSTOMER CONTACT) never get dropped.
+                # This avoids LLM inconsistency when mapping instructions to the blue order-info row.
+                if template_name and template_name.lower() == "packingslip_template.pdf":
+                    form_schema = self._prefill_packing_slip_form_schema(form_schema, fill_data)
+
                 print(f"✓ Using existing form schema ({len(form_schema)} fields)")
                 result = self.client.edit.run(
                     document_url=template_file_id,
@@ -411,6 +431,147 @@ Please extract the information and return ONLY a valid JSON object matching the 
         except Exception as e:
             print(f"✗ Error filling template: {str(e)}")
             raise
+
+    def _prefill_packing_slip_form_schema(self, form_schema: List[Dict], fill_data: Dict) -> List[Dict]:
+        """
+        Prefill Packing Slip schema fields by matching on schema 'description' prefixes.
+        This makes critical fields deterministic (no LLM guessing), especially the blue order-info row.
+        """
+        import copy
+        import re
+
+        schema = copy.deepcopy(form_schema)
+
+        def as_str(v):
+            if v is None:
+                return ""
+            return str(v)
+
+        # Canonical values (stringified)
+        header_values = {
+            "DATE": as_str(fill_data.get("date")),
+            "CUSTOMER ID": as_str(fill_data.get("customer_id")),
+            "SALESPERSON": as_str(fill_data.get("salesperson")),
+        }
+
+        order_info_values = {
+            "ORDER DATE": as_str(fill_data.get("order_date")),
+            "ORDER #": as_str(fill_data.get("order_number")),
+            "PURCHASE ORDER #": as_str(fill_data.get("purchase_order_number")),
+            "CUSTOMER CONTACT": as_str(fill_data.get("customer_contact")),
+        }
+
+        ship_to = fill_data.get("ship_to") or {}
+        bill_to = fill_data.get("bill_to") or {}
+        has_bill_to = isinstance(fill_data.get("bill_to"), dict) and any((fill_data.get("bill_to") or {}).values())
+
+        ship_city_state_zip = " ".join(
+            [as_str(ship_to.get("city")).strip(), as_str(ship_to.get("state")).strip(), as_str(ship_to.get("zip_code")).strip()]
+        ).strip()
+        bill_city_state_zip = " ".join(
+            [as_str(bill_to.get("city")).strip(), as_str(bill_to.get("state")).strip(), as_str(bill_to.get("zip_code")).strip()]
+        ).strip()
+
+        items = fill_data.get("items") or []
+
+        # Track whether we successfully matched critical order-row fields (debug)
+        matched_order = {k: False for k in order_info_values.keys()}
+
+        def extract_row_num(desc: str) -> int | None:
+            # Examples: "(1st row shown)", "(2nd row shown)", "(12th row/last listed)"
+            m = re.search(r"\((\d+)(st|nd|rd|th)\s+row", desc)
+            if not m:
+                return None
+            try:
+                return int(m.group(1))
+            except Exception:
+                return None
+
+        def canonical_field_key(description: str) -> str:
+            """
+            Convert schema description into a canonical key for matching.
+            Example: "ORDER DATE:. Date the order was placed..." -> "ORDER DATE"
+                     "SHIP TO: Company Name:. ..." -> "SHIP TO: COMPANY NAME"
+            """
+            head = (description or "").strip().split(".", 1)[0].strip()
+            # Remove trailing colon(s)
+            head = re.sub(r":\s*$", "", head)
+            # Normalize whitespace + uppercase
+            head = re.sub(r"\s+", " ", head).upper()
+            return head
+
+        for field in schema:
+            desc = (field.get("description") or "").strip()
+            if not desc:
+                continue
+
+            key = canonical_field_key(desc)
+
+            # Simple header fields
+            if key in header_values:
+                field["value"] = header_values[key]
+                continue
+
+            # Order info row (critical)
+            if key in order_info_values:
+                field["value"] = order_info_values[key]
+                matched_order[key] = True
+                continue
+
+            # Address subfields
+            if key.startswith("SHIP TO:"):
+                sub = key.replace("SHIP TO:", "", 1).strip()
+                if sub in ("COMPANY NAME", "COMPANY NAME:"):
+                    field["value"] = as_str(ship_to.get("name"))
+                elif sub in ("STREET ADDRESS", "STREET ADDRESS:"):
+                    field["value"] = as_str(ship_to.get("address"))
+                elif sub in ("CITY/STATE/ZIP CODE", "CITY/STATE/ZIP CODE:"):
+                    field["value"] = ship_city_state_zip
+                elif sub in ("COUNTRY", "COUNTRY:"):
+                    field["value"] = as_str(ship_to.get("country"))
+                continue
+
+            if key.startswith("BILL TO:"):
+                sub = key.replace("BILL TO:", "", 1).strip()
+                if not has_bill_to:
+                    field["value"] = ""
+                    continue
+                if sub in ("COMPANY NAME", "COMPANY NAME:"):
+                    field["value"] = as_str(bill_to.get("name"))
+                elif sub in ("STREET ADDRESS", "STREET ADDRESS:"):
+                    field["value"] = as_str(bill_to.get("address"))
+                elif sub in ("CITY/STATE/ZIP CODE", "CITY/STATE/ZIP CODE:"):
+                    field["value"] = bill_city_state_zip
+                elif sub in ("COUNTRY", "COUNTRY:"):
+                    field["value"] = as_str(bill_to.get("country"))
+                continue
+
+            # Line items (row-specific)
+            if key.startswith("ITEM # (LINE ITEM)") or key.startswith("DESCRIPTION (LINE ITEM)") or key.startswith("ORDER QTY (LINE ITEM)") or key.startswith("SHIP QTY (LINE ITEM)"):
+                row_num = extract_row_num(desc)
+                if not row_num:
+                    continue
+                idx = row_num - 1
+                if idx < 0 or idx >= len(items):
+                    field["value"] = ""
+                    continue
+                item = items[idx] or {}
+                if key.startswith("ITEM # (LINE ITEM)"):
+                    field["value"] = as_str(item.get("item_number"))
+                elif key.startswith("DESCRIPTION (LINE ITEM)"):
+                    field["value"] = as_str(item.get("description"))
+                elif key.startswith("ORDER QTY (LINE ITEM)"):
+                    field["value"] = as_str(item.get("order_qty"))
+                elif key.startswith("SHIP QTY (LINE ITEM)"):
+                    field["value"] = as_str(item.get("ship_qty"))
+
+        # Debug: if schema didn't match those order-info fields, log it so we can fix schema text patterns.
+        # This is the #1 reason they stay blank even though the data exists.
+        missing = [k for k, ok in matched_order.items() if not ok and order_info_values.get(k)]
+        if missing:
+            print(f"⚠ PackingSlip schema prefill: could not match order-info fields in schema: {missing}")
+
+        return schema
     
     def _wrap_text(self, text: str, width: int = 60) -> str:
         """
@@ -445,24 +606,270 @@ Please extract the information and return ONLY a valid JSON object matching the 
     def _data_to_instructions(self, data: Dict) -> str:
         """
         Convert structured data dictionary to natural language instructions
-
-        Args:
-            data: Dictionary with document data (BOL or PackingSlip format)
-
-        Returns:
-            Natural language filling instructions
+        
+        Detects document type and uses specialized formatters for better accuracy
+        """
+        # Detect document type
+        is_packing_slip = 'customer_id' in data or 'purchase_order_number' in data
+        is_bol = 'bol_number' in data or 'bol_date' in data
+        
+        if is_packing_slip and not is_bol:
+            return self._packing_slip_instructions(data)
+        elif is_bol:
+            return self._bol_instructions(data)
+        else:
+            return self._generic_instructions(data)
+    
+    def _packing_slip_instructions(self, data: Dict) -> str:
+        """
+        Generate instructions for Packing Slip that match the form schema exactly
         """
         instructions = []
+        instructions.append("Fill this Packing Slip form with the following information:")
+        instructions.append("")
+        
+        # HEADER SECTION - Match schema descriptions exactly
+        instructions.append("HEADER SECTION (top right corner):")
+        if data.get('date'):
+            instructions.append(f"DATE field (date format): {data['date']}")
+        
+        if data.get('customer_id'):
+            instructions.append(f"CUSTOMER ID field (text): {data['customer_id']}")
+        
+        if data.get('salesperson'):
+            instructions.append(f"SALESPERSON field (text): {data['salesperson']}")
+        
+        instructions.append("")
+        
+        # BILL TO SECTION
+        instructions.append("BILL TO SECTION:")
+        bill_to = data.get('bill_to')
+        if bill_to and isinstance(bill_to, dict) and any(bill_to.values()):
+            if bill_to.get('name'):
+                instructions.append(f"BILL TO: Company Name: {bill_to['name']}")
+            if bill_to.get('address'):
+                instructions.append(f"BILL TO: Street Address: {bill_to['address']}")
+            city = bill_to.get('city', '')
+            state = bill_to.get('state', '')
+            zip_code = bill_to.get('zip_code', '')
+            if city or state or zip_code:
+                instructions.append(f"BILL TO: City/State/Zip Code: {city} {state} {zip_code}".strip())
+            if bill_to.get('country'):
+                instructions.append(f"BILL TO: Country: {bill_to['country']}")
+        else:
+            instructions.append("Leave all BILL TO fields blank")
+        
+        instructions.append("")
+        
+        # SHIP TO SECTION - This should always be filled
+        instructions.append("SHIP TO SECTION:")
+        ship_to = data.get('ship_to')
+        if ship_to and isinstance(ship_to, dict):
+            if ship_to.get('name'):
+                instructions.append(f"SHIP TO: Company Name: {ship_to['name']}")
+            if ship_to.get('address'):
+                instructions.append(f"SHIP TO: Street Address: {ship_to['address']}")
+            city = ship_to.get('city', '')
+            state = ship_to.get('state', '')
+            zip_code = ship_to.get('zip_code', '')
+            if city or state or zip_code:
+                instructions.append(f"SHIP TO: City/State/Zip Code: {city} {state} {zip_code}".strip())
+            if ship_to.get('country'):
+                instructions.append(f"SHIP TO: Country: {ship_to['country']}")
+        
+        instructions.append("")
+        
+        # ORDER INFORMATION ROW - Always include all fields explicitly
+        instructions.append("ORDER INFORMATION ROW (below SHIP TO section):")
+        
+        # ORDER DATE field
+        order_date = data.get('order_date', '')
+        if order_date:
+            instructions.append(f"Fill ORDER DATE field with: {order_date}")
+        else:
+            instructions.append(f"ORDER DATE: Leave blank")
+        
+        # ORDER # field
+        order_number = data.get('order_number', '')
+        if order_number:
+            instructions.append(f"Fill ORDER # field with: {order_number}")
+        else:
+            instructions.append(f"ORDER #: Leave blank")
+        
+        # PURCHASE ORDER # field
+        po_number = data.get('purchase_order_number', '')
+        if po_number:
+            instructions.append(f"Fill PURCHASE ORDER # field with: {po_number}")
+        else:
+            instructions.append(f"PURCHASE ORDER #: Leave blank")
+        
+        # CUSTOMER CONTACT field
+        customer_contact = data.get('customer_contact', '')
+        if customer_contact:
+            instructions.append(f"Fill CUSTOMER CONTACT field with: {customer_contact}")
+        else:
+            instructions.append(f"CUSTOMER CONTACT: Leave blank")
+        
+        instructions.append("")
+        
+        # LINE ITEMS - Match schema row descriptions
+        instructions.append("LINE ITEMS TABLE (columns: ITEM #, DESCRIPTION, ORDER QTY, SHIP QTY):")
+        items = data.get('items', [])
+        
+        row_labels = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th', '8th', '9th', '10th', '11th', '12th']
+        
+        for idx, item in enumerate(items):
+            if idx < len(row_labels):
+                row_label = row_labels[idx]
+            else:
+                row_label = f"{idx + 1}th"
+            
+            instructions.append(f"Line item ({row_label} row):")
+            
+            if item.get('item_number'):
+                instructions.append(f"  ITEM # (product code): {item['item_number']}")
+            
+            if item.get('description'):
+                desc = self._wrap_text(item['description'], width=60)
+                instructions.append(f"  DESCRIPTION (product name): {desc}")
+            
+            if item.get('order_qty') is not None:
+                instructions.append(f"  ORDER QTY (numeric quantity only): {item['order_qty']}")
+            
+            if item.get('ship_qty') is not None:
+                instructions.append(f"  SHIP QTY (numeric quantity only): {item['ship_qty']}")
+            
+            instructions.append("")
+        
+        # TOTAL
+        if data.get('total'):
+            instructions.append(f"TOTAL: {data['total']}")
+        
+        return "\n".join(instructions)
+    
+    def _bol_instructions(self, data: Dict) -> str:
+        """
+        Generate instructions for BOL
+        """
+        instructions = []
+        instructions.append("Fill this Bill of Lading with the following information:")
+        instructions.append("")
+        
+        # BOL Header
+        if data.get('bol_number'):
+            instructions.append(f"BOL NUMBER (digits only): {data['bol_number']}")
+        if data.get('bol_date'):
+            instructions.append(f"BOL DATE (YYYY-MM-DD): {data['bol_date']}")
+        
+        # Carrier
+        if data.get('carrier_name'):
+            instructions.append(f"CARRIER NAME: {data['carrier_name']}")
+        
+        # Ship From
+        ship_from = data.get('ship_from')
+        if ship_from:
+            instructions.append("")
+            instructions.append("SHIP FROM:")
+            if ship_from.get('name'):
+                instructions.append(f"  Company: {ship_from['name']}")
+            if ship_from.get('address'):
+                instructions.append(f"  Address: {ship_from['address']}")
+            city_state_zip = f"{ship_from.get('city', '')} {ship_from.get('state', '')} {ship_from.get('zip_code', '')}".strip()
+            if city_state_zip:
+                instructions.append(f"  City/State/Zip: {city_state_zip}")
+        
+        # Ship To
+        ship_to = data.get('ship_to')
+        if ship_to:
+            instructions.append("")
+            instructions.append("SHIP TO:")
+            if ship_to.get('name'):
+                instructions.append(f"  Company: {ship_to['name']}")
+            if ship_to.get('address'):
+                instructions.append(f"  Address: {ship_to['address']}")
+            city_state_zip = f"{ship_to.get('city', '')} {ship_to.get('state', '')} {ship_to.get('zip_code', '')}".strip()
+            if city_state_zip:
+                instructions.append(f"  City/State/Zip: {city_state_zip}")
+        
+        # Products
+        products = data.get('products', [])
+        if products:
+            instructions.append("")
+            instructions.append("PRODUCTS (be strict about types: counts vs weights vs units):")
+            for i, product in enumerate(products, 1):
+                instructions.append(f"  Product {i}:")
+                if product.get('name'):
+                    instructions.append(f"    Name (text): {product['name']}")
+                if product.get('description'):
+                    instructions.append(f"    Description (text): {self._wrap_text(product['description'], width=60)}")
+                if product.get('item_number'):
+                    instructions.append(f"    Item Number (text/code): {product['item_number']}")
+                if product.get('un_code'):
+                    instructions.append(f"    UN Code (text): {product['un_code']}")
+                handling = product.get('handling_unit') or {}
+                if isinstance(handling, dict):
+                    if handling.get('quantity') is not None:
+                        instructions.append(f"    Handling Unit Quantity (integer count only): {handling.get('quantity')}")
+                    if handling.get('type'):
+                        instructions.append(f"    Handling Unit Type (IBC/Drum/Pallet/Box text only): {handling.get('type')}")
+                pkg = product.get('package') or {}
+                if isinstance(pkg, dict):
+                    if pkg.get('quantity') is not None:
+                        instructions.append(f"    Package/Weight Quantity (numeric only): {pkg.get('quantity')}")
+                    if pkg.get('type'):
+                        instructions.append(f"    Package/Weight Unit (kg/lb text only): {pkg.get('type')}")
+                if product.get('weight') is not None:
+                    instructions.append(f"    Total Weight (numeric only): {product.get('weight')}")
 
-        # Recursively process the data
+        # Orders (table-like fields) — this is where column swaps usually happen
+        orders = data.get('orders', [])
+        if orders:
+            instructions.append("")
+            instructions.append("ORDERS (be strict: counts are integers; weights are numbers; units are separate):")
+            for i, order in enumerate(orders, 1):
+                instructions.append(f"  Order {i}:")
+                if order.get('customer_id'):
+                    instructions.append(f"    Customer ID (text): {order.get('customer_id')}")
+                if order.get('po_number'):
+                    instructions.append(f"    PO Number (text): {order.get('po_number')}")
+                if order.get('sales_order_number'):
+                    instructions.append(f"    Sales Order Number (digits/text): {order.get('sales_order_number')}")
+                if order.get('material_name'):
+                    instructions.append(f"    Material Name (text): {order.get('material_name')}")
+                if order.get('num_packages') is not None:
+                    instructions.append(f"    Number of Packages (integer count only): {order.get('num_packages')}")
+                if order.get('weight') is not None:
+                    instructions.append(f"    Weight (numeric only): {order.get('weight')}")
+                if order.get('weight_unit'):
+                    instructions.append(f"    Weight Unit (kg/lb text only): {order.get('weight_unit')}")
+                if order.get('country_of_origin'):
+                    instructions.append(f"    Country of Origin (text): {order.get('country_of_origin')}")
+                if order.get('customer_po'):
+                    instructions.append(f"    Customer PO (text): {order.get('customer_po')}")
+                if order.get('additional_shipper_info'):
+                    instructions.append(f"    Additional Shipper Info (text): {self._wrap_text(order.get('additional_shipper_info'), width=60)}")
+        
+        # Special Instructions
+        if data.get('special_instructions'):
+            instructions.append("")
+            wrapped = self._wrap_text(data['special_instructions'], width=60)
+            instructions.append(f"SPECIAL INSTRUCTIONS: {wrapped}")
+        
+        return "\n".join(instructions)
+    
+    def _generic_instructions(self, data: Dict) -> str:
+        """
+        Fallback generic instructions
+        """
+        instructions = []
+        instructions.append("Fill this form with the following information:")
+        instructions.append("")
+        
         def process_dict(d, prefix=""):
             for key, value in d.items():
-                if value is None:
-                    continue
-
                 field_name = key.replace('_', ' ').title()
                 full_key = f"{prefix}{field_name}" if prefix else field_name
-
+                
                 if isinstance(value, dict):
                     process_dict(value, f"{full_key} - ")
                 elif isinstance(value, list):
@@ -470,16 +877,15 @@ Please extract the information and return ONLY a valid JSON object matching the 
                         for i, item in enumerate(value, 1):
                             process_dict(item, f"{full_key} {i} - ")
                     else:
-                        instructions.append(f"- {full_key}: {', '.join(str(v) for v in value)}")
+                        value_str = ', '.join(str(v) for v in value) if value else ''
+                        instructions.append(f"{full_key}: {value_str}")
                 else:
-                    # Wrap long text values to prevent PDF field overflow
-                    wrapped_value = self._wrap_text(value, width=60)
-                    instructions.append(f"- {full_key}: {wrapped_value}")
-
-        instructions.append("Fill this form with the following information:")
-        instructions.append("")
+                    if value is None:
+                        instructions.append(f"{full_key}: [Leave blank]")
+                    else:
+                        instructions.append(f"{full_key}: {value}")
+        
         process_dict(data)
-
         return "\n".join(instructions)
     
     def _download_document(self, url: str, save_path: str):
@@ -926,7 +1332,10 @@ class DocumentManager:
                              bol_template_file_id: str = None,
                              form_schema_path: str = None,
                              use_saved_schema: bool = True,
-                             output_filename: str = None) -> Dict:
+                             output_filename: str = None,
+                             address_overrides: Dict = None,
+                             bol_number_override: str = None,
+                             bol_data: Dict = None) -> Dict:
         """
         Generate BOL data from PO and fill the BOL template
         
@@ -937,6 +1346,9 @@ class DocumentManager:
             form_schema_path: Path to saved form schema JSON (optional, for faster processing)
             use_saved_schema: Whether to use schema saved in database (default: True)
             output_filename: Name for the output file (auto-generated if not provided)
+            address_overrides: Dictionary with 'ship_from' and/or 'ship_to' address overrides
+            bol_number_override: Custom BOL number to use instead of AI-generated one
+            bol_data: Pre-generated BOL data (if provided, skips AI generation)
         
         Returns:
             Dictionary with BOL data and filled document URL
@@ -948,9 +1360,26 @@ class DocumentManager:
         if not po_doc:
             raise ValueError(f"Purchase Order not found")
         
-        # Generate BOL data
-        print("📋 Generating BOL data from Purchase Order...")
-        bol_data = self.generate_bol_from_po(po_document_name, po_document_id, save_to_db=True)
+        # Generate BOL data only if not provided
+        if bol_data is None:
+            print("📋 Generating BOL data from Purchase Order...")
+            bol_data = self.generate_bol_from_po(po_document_name, po_document_id, save_to_db=True)
+        else:
+            print("📋 Using pre-generated BOL data (skipping AI call)")
+        
+        # Apply address overrides if provided
+        if address_overrides:
+            if 'ship_from' in address_overrides:
+                bol_data['ship_from'] = address_overrides['ship_from']
+                print(f"✓ Applied ship_from address override: {address_overrides['ship_from'].get('name')}")
+            if 'ship_to' in address_overrides:
+                bol_data['ship_to'] = address_overrides['ship_to']
+                print(f"✓ Applied ship_to address override: {address_overrides['ship_to'].get('name')}")
+        
+        # Apply BOL number override if provided
+        if bol_number_override:
+            bol_data['bol_number'] = bol_number_override
+            print(f"✓ Applied BOL number override: {bol_number_override}")
         
         # Get or upload template
         if not bol_template_file_id:
@@ -1016,7 +1445,9 @@ class DocumentManager:
                                       ps_template_file_id: str = None,
                                       form_schema_path: str = None,
                                       use_saved_schema: bool = True,
-                                      output_filename: str = None) -> Dict:
+                                      output_filename: str = None,
+                                      address_overrides: Dict = None,
+                                      packing_slip_data: Dict = None) -> Dict:
         """
         Generate Packing Slip data from PO and fill the template
         
@@ -1027,6 +1458,8 @@ class DocumentManager:
             form_schema_path: Path to saved form schema JSON (optional)
             use_saved_schema: Whether to use schema saved in database (default: True)
             output_filename: Name for the output file (auto-generated if not provided)
+            address_overrides: Dictionary with 'ship_to' address override
+            packing_slip_data: Pre-generated Packing Slip data (if provided, skips AI generation)
         
         Returns:
             Dictionary with packing slip data and filled document URL
@@ -1038,9 +1471,19 @@ class DocumentManager:
         if not po_doc:
             raise ValueError(f"Purchase Order not found")
         
-        # Generate Packing Slip data
-        print("📦 Generating Packing Slip data from Purchase Order...")
-        ps_data = self.generate_packing_slip_from_po(po_document_name, po_document_id, save_to_db=True)
+        # Generate Packing Slip data only if not provided
+        if packing_slip_data is None:
+            print("📦 Generating Packing Slip data from Purchase Order...")
+            ps_data = self.generate_packing_slip_from_po(po_document_name, po_document_id, save_to_db=True)
+        else:
+            print("📦 Using pre-generated Packing Slip data (skipping AI call)")
+            ps_data = packing_slip_data
+        
+        # Apply address overrides if provided
+        if address_overrides:
+            if 'ship_to' in address_overrides:
+                ps_data['ship_to'] = address_overrides['ship_to']
+                print(f"✓ Applied ship_to address override: {address_overrides['ship_to'].get('name')}")
         
         # Get or upload template
         if not ps_template_file_id:
@@ -1261,13 +1704,50 @@ def setup_form_schemas():
         upload = manager.parser.upload_file(ps_template)
         file_id = upload.file_id if hasattr(upload, 'file_id') else str(upload)
 
+        # Match the exact format used by _packing_slip_instructions()
         sample_instructions = """
-        Fill with:
-        - Customer ID: CUST-001
-        - Purchase Order: PO-12345
-        - Date: 2024-12-26
-        - Salesperson: John Smith
-        - Item: ITEM-001, Silicone Oil, Qty: 2
+Fill this Packing Slip form with the following information:
+
+HEADER SECTION (top right corner):
+DATE field (date format): 2024-12-26
+CUSTOMER ID field (text): Solenis LLC
+SALESPERSON field (text): John Smith
+
+BILL TO SECTION:
+Leave all BILL TO fields blank
+
+SHIP TO SECTION:
+SHIP TO: Company Name: Solenis Plant - Burlington
+SHIP TO: Street Address: 456 Industrial Drive
+SHIP TO: City/State/Zip Code: Burlington WI 53105
+SHIP TO: Country: USA
+
+ORDER INFORMATION ROW (below SHIP TO section):
+Fill ORDER DATE field with: 2024-12-20
+Fill ORDER # field with: SO-2024-001
+Fill PURCHASE ORDER # field with: PO-4535119724
+Fill CUSTOMER CONTACT field with: Jane Doe
+
+LINE ITEMS TABLE (columns: ITEM #, DESCRIPTION, ORDER QTY, SHIP QTY):
+Line item (1st row):
+  ITEM # (product code): HC-1001
+  DESCRIPTION (product name): Sodium Hydroxide 50% - Industrial Grade (Kg)
+  ORDER QTY (numeric quantity only): 2000
+  SHIP QTY (numeric quantity only): 2000
+
+Line item (2nd row):
+  ITEM # (product code): HC-1002
+  DESCRIPTION (product name): Polymer Additive XR-200 (Kg)
+  ORDER QTY (numeric quantity only): 500
+  SHIP QTY (numeric quantity only): 500
+
+Line item (3rd row):
+  ITEM # (product code): HC-1003
+  DESCRIPTION (product name): Silicone Oil Grade A (Kg)
+  ORDER QTY (numeric quantity only): 1000
+  SHIP QTY (numeric quantity only): 1000
+
+TOTAL: 3500
         """
 
         schema = manager.parser.generate_form_schema(file_id, sample_instructions, save_path=None)

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Seller Company - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Edit Seller Company</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('sellers_edit', seller_id=seller.id) }}">
+        <div class="form-group">
+            <label for="company_name">Company Name *</label>
+            <input type="text" id="company_name" name="company_name" class="form-control" required
+                   value="{{ seller.company_name }}">
+        </div>
+
+        <div class="form-group">
+            <label for="default_salesperson">Default Salesperson</label>
+            <input type="text" id="default_salesperson" name="default_salesperson" class="form-control"
+                   value="{{ seller.default_salesperson or '' }}">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" class="form-control"
+                       value="{{ seller.phone or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" class="form-control"
+                       value="{{ seller.email or '' }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" rows="3">{{ seller.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="is_default" {% if seller.is_default %}checked{% endif %}> 
+                Set as default seller company
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Seller Company</button>
+            <a href="{{ url_for('sellers_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+{% if seller.addresses %}
+<div class="detail-card" style="margin-top: 2rem;">
+    <h2>Linked Addresses</h2>
+    <p>Manage addresses on the <a href="{{ url_for('addresses_list') }}">Addresses page</a>.</p>
+    <ul>
+        {% for address in seller.addresses %}
+        <li>
+            <strong>{{ address.label or address.name }}</strong>: 
+            {{ address.address }}, {{ address.city }}, {{ address.state }} {{ address.zip_code }}, {{ address.country }}
+            {% if address.is_default %}<span class="badge badge-success">Default</span>{% endif %}
+        </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+{% endblock %}

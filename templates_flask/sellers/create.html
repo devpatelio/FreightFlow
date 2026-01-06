@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+
+{% block title %}Create Seller Company - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Create Seller Company</h1>
+</div>
+
+<p class="info-text">
+    Create your seller company profile. You can add multiple addresses (US warehouse, Canadian HQ, etc.) 
+    after creating the company via the Addresses page.
+</p>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('sellers_create') }}">
+        <div class="form-group">
+            <label for="company_name">Company Name *</label>
+            <input type="text" id="company_name" name="company_name" class="form-control" required
+                   placeholder="e.g., Hanson Chemicals">
+        </div>
+
+        <div class="form-group">
+            <label for="default_salesperson">Default Salesperson</label>
+            <input type="text" id="default_salesperson" name="default_salesperson" class="form-control"
+                   placeholder="e.g., Pan Patel">
+            <small class="form-text">This name will be used on generated Packing Slips</small>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" class="form-control"
+                       placeholder="e.g., 416-457-8271">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" class="form-control">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">Notes</label>
+            <textarea id="notes" name="notes" class="form-control" rows="3"
+                      placeholder="Additional company information..."></textarea>
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="is_default"> 
+                Set as default seller company
+            </label>
+            <small class="form-text">The default company will be used when generating BOL and Packing Slips</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Create Seller Company</button>
+            <a href="{{ url_for('sellers_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<div class="info-box" style="margin-top: 2rem;">
+    <h3>Next Steps</h3>
+    <p>After creating the seller company, go to <strong>Addresses</strong> to add shipping addresses:</p>
+    <ul>
+        <li>US Warehouse address (for US shipments)</li>
+        <li>Canadian address (for Canadian shipments)</li>
+        <li>Any other locations you ship from</li>
+    </ul>
+</div>
+{% endblock %}

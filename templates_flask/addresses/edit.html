@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Address - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Edit Address</h1>
+</div>
+
+<div class="form-container">
+    <form method="POST" action="{{ url_for('addresses_edit', address_id=address.id) }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="name">Company/Location Name *</label>
+                <input type="text" id="name" name="name" class="form-control" required 
+                       value="{{ address.name }}">
+            </div>
+
+            <div class="form-group">
+                <label for="label">Label</label>
+                <input type="text" id="label" name="label" class="form-control"
+                       value="{{ address.label or '' }}">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="address">Street Address *</label>
+            <input type="text" id="address" name="address" class="form-control" required
+                   value="{{ address.address }}">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="city">City *</label>
+                <input type="text" id="city" name="city" class="form-control" required
+                       value="{{ address.city }}">
+            </div>
+
+            <div class="form-group">
+                <label for="state">State/Province *</label>
+                <input type="text" id="state" name="state" class="form-control" required
+                       value="{{ address.state }}">
+            </div>
+
+            <div class="form-group">
+                <label for="zip_code">ZIP/Postal Code *</label>
+                <input type="text" id="zip_code" name="zip_code" class="form-control" required
+                       value="{{ address.zip_code }}">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="country">Country *</label>
+                <select id="country" name="country" class="form-control" required>
+                    <option value="USA" {% if address.country == 'USA' %}selected{% endif %}>USA</option>
+                    <option value="CANADA" {% if address.country == 'CANADA' %}selected{% endif %}>Canada</option>
+                    <option value="MEXICO" {% if address.country == 'MEXICO' %}selected{% endif %}>Mexico</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="address_type">Address Type</label>
+                <select id="address_type" name="address_type" class="form-control">
+                    <option value="shipping" {% if address.address_type == 'shipping' %}selected{% endif %}>Shipping</option>
+                    <option value="billing" {% if address.address_type == 'billing' %}selected{% endif %}>Billing</option>
+                    <option value="warehouse" {% if address.address_type == 'warehouse' %}selected{% endif %}>Warehouse</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="phone">Phone</label>
+                <input type="text" id="phone" name="phone" class="form-control"
+                       value="{{ address.phone or '' }}">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" class="form-control"
+                       value="{{ address.email or '' }}">
+            </div>
+        </div>
+
+        <h3>Link To</h3>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="seller_company_id">Seller Company</label>
+                <select id="seller_company_id" name="seller_company_id" class="form-control">
+                    <option value="">-- None --</option>
+                    {% for seller in seller_companies %}
+                    <option value="{{ seller.id }}" {% if address.seller_company_id == seller.id %}selected{% endif %}>
+                        {{ seller.company_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="account_id">Customer</label>
+                <select id="account_id" name="account_id" class="form-control">
+                    <option value="">-- None --</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}" {% if address.account_id == customer.id %}selected{% endif %}>
+                        {{ customer.company_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" name="is_default" {% if address.is_default %}checked{% endif %}> 
+                Set as default address
+            </label>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Address</button>
+            <a href="{{ url_for('addresses_list') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.getElementById('seller_company_id').addEventListener('change', function() {
+    if (this.value) {
+        document.getElementById('account_id').value = '';
+    }
+});
+document.getElementById('account_id').addEventListener('change', function() {
+    if (this.value) {
+        document.getElementById('seller_company_id').value = '';
+    }
+});
+</script>
+{% endblock %}

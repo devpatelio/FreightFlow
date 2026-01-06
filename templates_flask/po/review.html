@@ -25,10 +25,84 @@
             <div class="info-item">
                 <strong>Document ID:</strong> {{ doc.document_id }}
             </div>
+            {% if next_bol_number %}
+            <div class="info-item">
+                <strong>Next BOL #:</strong> <span class="badge badge-primary">{{ next_bol_number }}</span>
+            </div>
+            {% endif %}
         </div>
     </div>
 
     <form method="POST" action="{{ url_for('po_generate', doc_id=doc.document_id) }}" id="generateForm">
+        
+        <!-- Ship From Address Selection -->
+        <div class="section">
+            <h2>Ship From Address (Seller)</h2>
+            <p class="help-text">Select which of your company addresses to use as the "Ship From" on the BOL.</p>
+            
+            {% if seller_companies %}
+            <div class="address-selection">
+                {% for seller in seller_companies %}
+                    {% if seller.addresses %}
+                    <div class="seller-group">
+                        <h4>{{ seller.company_name }} {% if seller.is_default %}<span class="badge badge-success">Default</span>{% endif %}</h4>
+                        <div class="address-options">
+                            {% for address in seller.addresses %}
+                            <label class="address-option">
+                                <input type="radio" name="ship_from_address_id" value="{{ address.id }}"
+                                       {% if address.is_default and seller.is_default %}checked{% endif %}>
+                                <div class="address-card">
+                                    <strong>{{ address.label or address.name }}</strong>
+                                    {% if address.is_default %}<span class="badge badge-sm">Default</span>{% endif %}
+                                    <span class="badge badge-country">{{ address.country }}</span>
+                                    <p>{{ address.address }}</p>
+                                    <p>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
+                                </div>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="alert alert-warning">
+                No seller companies with addresses found. 
+                <a href="{{ url_for('sellers_create') }}">Create a seller company</a> and 
+                <a href="{{ url_for('addresses_create') }}">add addresses</a> to populate the Ship From field.
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Ship To Address Selection (optional override) -->
+        {% if customer_addresses %}
+        <div class="section">
+            <h2>Ship To Address (Customer)</h2>
+            <p class="help-text">Optionally override the Ship To address extracted from the PO.</p>
+            
+            <div class="address-options">
+                <label class="address-option">
+                    <input type="radio" name="ship_to_address_id" value="" checked>
+                    <div class="address-card">
+                        <strong>Use address from PO</strong>
+                        <p>Keep the Ship To address extracted from the Purchase Order</p>
+                    </div>
+                </label>
+                {% for address in customer_addresses %}
+                <label class="address-option">
+                    <input type="radio" name="ship_to_address_id" value="{{ address.id }}">
+                    <div class="address-card">
+                        <strong>{{ address.label or address.name }}</strong>
+                        {% if address.is_default %}<span class="badge badge-sm">Default</span>{% endif %}
+                        <span class="badge badge-country">{{ address.country }}</span>
+                        <p>{{ address.address }}</p>
+                        <p>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</p>
+                    </div>
+                </label>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
         <div class="section">
             <h2>Bill of Lading Data</h2>
             <p class="help-text">Review and edit the extracted BOL data below. This data will be used to fill the BOL template.</p>

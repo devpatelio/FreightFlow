@@ -145,6 +145,202 @@ class SupabaseService:
         return account
 
     # ========================================================================
+    # ADDRESS OPERATIONS
+    # ========================================================================
+
+    def create_address(self, name: str, address: str, city: str, state: str,
+                      zip_code: str, country: str = "USA", **kwargs) -> Dict[str, Any]:
+        """Create a new address"""
+        data = {
+            'name': name,
+            'address': address,
+            'city': city,
+            'state': state,
+            'zip_code': zip_code,
+            'country': country,
+            'phone': kwargs.get('phone'),
+            'email': kwargs.get('email'),
+            'address_type': kwargs.get('address_type', 'shipping'),  # shipping, billing, warehouse
+            'account_id': kwargs.get('account_id'),  # Link to customer account (optional)
+            'seller_company_id': kwargs.get('seller_company_id'),  # Link to seller company (optional)
+            'is_default': kwargs.get('is_default', False),
+            'label': kwargs.get('label')  # e.g., "Canadian Warehouse", "US Distribution Center"
+        }
+
+        result = self.client.table('addresses').insert(data).execute()
+        return result.data[0] if result.data else None
+
+    def get_address(self, address_id: str) -> Optional[Dict[str, Any]]:
+        """Get address by ID"""
+        result = self.client.table('addresses')\
+            .select('*')\
+            .eq('id', address_id)\
+            .execute()
+
+        return result.data[0] if result.data else None
+
+    def list_addresses(self, account_id: Optional[str] = None, 
+                       seller_company_id: Optional[str] = None,
+                       address_type: Optional[str] = None) -> List[Dict[str, Any]]:
+        """List addresses, optionally filtered"""
+        query = self.client.table('addresses').select('*')
+
+        if account_id:
+            query = query.eq('account_id', account_id)
+        if seller_company_id:
+            query = query.eq('seller_company_id', seller_company_id)
+        if address_type:
+            query = query.eq('address_type', address_type)
+
+        result = query.order('name').execute()
+        return result.data or []
+
+    def list_seller_addresses(self) -> List[Dict[str, Any]]:
+        """List all addresses linked to seller companies"""
+        result = self.client.table('addresses')\
+            .select('*, seller_companies(*)')\
+            .not_.is_('seller_company_id', 'null')\
+            .order('name')\
+            .execute()
+
+        return result.data or []
+
+    def list_customer_addresses(self, account_id: str) -> List[Dict[str, Any]]:
+        """List all addresses for a specific customer"""
+        result = self.client.table('addresses')\
+            .select('*')\
+            .eq('account_id', account_id)\
+            .order('name')\
+            .execute()
+
+        return result.data or []
+
+    def update_address(self, address_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update an address"""
+        result = self.client.table('addresses')\
+            .update(data)\
+            .eq('id', address_id)\
+            .execute()
+
+        return result.data[0] if result.data else None
+
+    def delete_address(self, address_id: str) -> bool:
+        """Delete an address"""
+        result = self.client.table('addresses')\
+            .delete()\
+            .eq('id', address_id)\
+            .execute()
+
+        return len(result.data) > 0 if result.data else False
+
+    # ========================================================================
+    # SELLER COMPANY OPERATIONS
+    # ========================================================================
+
+    def create_seller_company(self, company_name: str, **kwargs) -> Dict[str, Any]:
+        """Create a new seller company (replaces static HansonChemicals.txt)"""
+        data = {
+            'company_name': company_name,
+            'default_salesperson': kwargs.get('default_salesperson'),
+            'phone': kwargs.get('phone'),
+            'email': kwargs.get('email'),
+            'notes': kwargs.get('notes'),
+            'is_default': kwargs.get('is_default', False)
+        }
+
+        result = self.client.table('seller_companies').insert(data).execute()
+        return result.data[0] if result.data else None
+
+    def get_seller_company(self, seller_id: str) -> Optional[Dict[str, Any]]:
+        """Get seller company by ID with addresses"""
+        result = self.client.table('seller_companies')\
+            .select('*, addresses(*)')\
+            .eq('id', seller_id)\
+            .execute()
+
+        return result.data[0] if result.data else None
+
+    def get_default_seller_company(self) -> Optional[Dict[str, Any]]:
+        """Get the default seller company with addresses"""
+        result = self.client.table('seller_companies')\
+            .select('*, addresses(*)')\
+            .eq('is_default', True)\
+            .execute()
+
+        if result.data:
+            return result.data[0]
+        
+        # If no default, return first seller company
+        result = self.client.table('seller_companies')\
+            .select('*, addresses(*)')\
+            .limit(1)\
+            .execute()
+
+        return result.data[0] if result.data else None
+
+    def list_seller_companies(self) -> List[Dict[str, Any]]:
+        """List all seller companies with their addresses"""
+        result = self.client.table('seller_companies')\
+            .select('*, addresses(*)')\
+            .order('company_name')\
+            .execute()
+
+        return result.data or []
+
+    def update_seller_company(self, seller_id: str, data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """Update a seller company"""
+        result = self.client.table('seller_companies')\
+            .update(data)\
+            .eq('id', seller_id)\
+            .execute()
+
+        return result.data[0] if result.data else None
+
+    def delete_seller_company(self, seller_id: str) -> bool:
+        """Delete a seller company"""
+        result = self.client.table('seller_companies')\
+            .delete()\
+            .eq('id', seller_id)\
+            .execute()
+
+        return len(result.data) > 0 if result.data else False
+
+    # ========================================================================
+    # BOL NUMBER GENERATION
+    # ========================================================================
+
+    def get_next_bol_number(self, account_id: str) -> str:
+        """
+        Generate next BOL number for a customer: YYYYMMDD + sequence number
+        Sequence is based on how many POs this customer has (1-indexed)
+        """
+        from datetime import datetime
+        
+        # Count POs for this customer
+        result = self.client.table('documents')\
+            .select('id', count='exact')\
+            .eq('account_id', account_id)\
+            .eq('document_type', 'PO')\
+            .execute()
+
+        po_count = (result.count or 0) + 1  # Next sequence number
+        
+        date_prefix = datetime.now().strftime('%Y%m%d')
+        sequence = str(po_count).zfill(2)  # 01, 02, 03, etc.
+        
+        return f"{date_prefix}{sequence}"
+
+    def get_customer_po_count(self, account_id: str) -> int:
+        """Get count of POs for a customer"""
+        result = self.client.table('documents')\
+            .select('id', count='exact')\
+            .eq('account_id', account_id)\
+            .eq('document_type', 'PO')\
+            .execute()
+
+        return result.count or 0
+
+    # ========================================================================
     # PRODUCT OPERATIONS
     # ========================================================================
 
@@ -248,6 +444,51 @@ class SupabaseService:
 
         return result.data[0] if result.data else None
 
+    def store_generated_data(self, document_id: int, bol_data: Dict = None, packing_slip_data: Dict = None) -> Optional[Dict[str, Any]]:
+        """Store generated BOL and Packing Slip data in the PO document"""
+        data = {}
+        
+        if bol_data is not None:
+            data['bol_data'] = json.dumps(bol_data)
+        
+        if packing_slip_data is not None:
+            data['packing_slip_data'] = json.dumps(packing_slip_data)
+        
+        if not data:
+            return None
+        
+        result = self.client.table('documents')\
+            .update(data)\
+            .eq('document_id', document_id)\
+            .execute()
+        
+        return result.data[0] if result.data else None
+
+    def get_generated_data(self, document_id: int) -> Dict[str, Any]:
+        """Retrieve stored BOL and Packing Slip data from PO document"""
+        doc = self.get_document(document_id)
+        
+        if not doc:
+            return {}
+        
+        result = {}
+        
+        # Parse BOL data if it exists
+        if doc.get('bol_data'):
+            if isinstance(doc['bol_data'], str):
+                result['bol_data'] = json.loads(doc['bol_data'])
+            else:
+                result['bol_data'] = doc['bol_data']
+        
+        # Parse Packing Slip data if it exists
+        if doc.get('packing_slip_data'):
+            if isinstance(doc['packing_slip_data'], str):
+                result['packing_slip_data'] = json.loads(doc['packing_slip_data'])
+            else:
+                result['packing_slip_data'] = doc['packing_slip_data']
+        
+        return result
+
     def link_documents(self, po_document_id: int, generated_document_id: int, relationship_type: str):
         """Link a PO to a generated document (BOL or PACKING_SLIP)"""
         data = {
@@ -292,10 +533,14 @@ class SupabaseService:
             'description': kwargs.get('description')
         }
 
-        # Try to update first, if not exists then insert
-        result = self.client.table('form_schemas')\
-            .upsert(data)\
-            .execute()
+        # Upsert on template_name (unique key). Without on_conflict, PostgREST may attempt an INSERT
+        # and fail with duplicate key errors.
+        table = self.client.table('form_schemas')
+        try:
+            result = table.upsert(data, on_conflict='template_name').execute()
+        except TypeError:
+            # Backwards compatibility for older supabase-py versions
+            result = table.upsert(data).execute()
 
         return result.data[0] if result.data else None
 
@@ -332,6 +577,20 @@ class SupabaseService:
             # If it's already a list/dict, use as-is
 
         return schemas
+
+    def update_form_schema(self, template_name: str, description: str) -> Optional[Dict[str, Any]]:
+        """Update form schema description"""
+        data = {
+            'description': description,
+            'updated_at': datetime.now().isoformat()
+        }
+        
+        result = self.client.table('form_schemas')\
+            .update(data)\
+            .eq('template_name', template_name)\
+            .execute()
+        
+        return result.data[0] if result.data else None
 
     def delete_form_schema(self, template_name: str) -> bool:
         """Delete a form schema"""

@@ -6,7 +6,7 @@ You are an expert logistics document processor. Your task is to extract informat
 ## REQUIRED INFORMATION TO EXTRACT:
 
 ### 1. BOL IDENTIFICATION
-- BOL Number: [Generate using format: YYYYMMDD followed by a 3-digit sequence number, e.g., 20241226001. Use TODAY'S DATE for YYYYMMDD portion]
+- BOL Number: [Will be provided - format: YYYYMMDD followed by customer's PO sequence number, e.g., 2024122601 for customer's 1st PO, 2024122602 for 2nd, etc.]
 - BOL Date: [Extract date or use current date in YYYY-MM-DD format]
 
 ### 2. SHIP FROM ADDRESS (Shipper)
@@ -67,6 +67,19 @@ For each product listed:
 - Handling Unit Type: [IBC, Drum, Pallet]
 - Package/Weight Quantity: [Extract weight value]
 - Package/Weight Unit: [kg or lb]
+
+## IMPORTANT TYPE + UNIT RULES (to prevent column mix-ups)
+
+- BOL Number: **digits only** (no hyphens, no spaces). Example: `20260106001`
+- Dates: **YYYY-MM-DD only** (use hyphens only in date fields)
+- **Counts/Quantities**:
+  - `orders[].num_packages` and `products[].handling_unit.quantity`: **integer count only** (e.g., `6`), not a weight, not a date, no units
+- **Types**:
+  - `products[].handling_unit.type`: one of **IBC | Drum | Pallet | Box** (text only)
+  - `products[].package.type` and `orders[].weight_unit`: one of **kg | lb** (text only)
+- **Weights**:
+  - `products[].package.quantity`, `products[].weight`, `orders[].weight`: **number only** (can be decimal). Do not include units in the number.
+- Never place a date string like `2026-01-06` into a quantity/weight field.
 
 ### 8. FINANCIAL INFORMATION
 - COD Amount: [Extract Cash on Delivery amount if applicable, otherwise null]
@@ -150,9 +163,15 @@ Return the extracted information in valid JSON format matching the BillOfLading 
 3. **Date Formats**: Use ISO format (YYYY-MM-DD) for all dates
 4. **Units**: Clearly identify whether weights are in kg or lb
 5. **Multiple Items**: Create separate entries for each product/order
-6. **Date-Based Numbering**: BOL Number and Sales Order Number should use YYYYMMDD format based on TODAY'S DATE
+6. **Date-Based Numbering**: BOL Number uses YYYYMMDD + customer PO sequence (e.g., 2024122601). Sales Order Number follows same format.
 7. **Validation**: Ensure all required fields are populated
 8. **Null Handling**: Use null for optional fields that have no data
+
+## VALIDATION (MUST PASS)
+
+- [ ] `orders[].num_packages` is a whole number count (no units)
+- [ ] `products[].handling_unit.type` is a packaging type (IBC/Drum/Pallet/Box), not a unit (kg/lb)
+- [ ] Weight fields are numeric-only and unit is in `weight_unit` / `package.type`
 
 ## SOURCE DOCUMENTS TO PROCESS:
 [Insert Purchase Order, shipping documents, or other source materials here]

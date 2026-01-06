@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block title %}{{ seller.company_name }} - Logistics Manager{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ seller.company_name }}</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('sellers_edit', seller_id=seller.id) }}" class="btn btn-primary">Edit</a>
+        <a href="{{ url_for('sellers_list') }}" class="btn btn-secondary">Back to List</a>
+    </div>
+</div>
+
+{% if seller.is_default %}
+<div class="alert alert-success">This is the default seller company</div>
+{% endif %}
+
+<div class="detail-card">
+    <h2>Company Information</h2>
+    <div class="detail-grid">
+        <div class="detail-item">
+            <label>Company Name</label>
+            <span>{{ seller.company_name }}</span>
+        </div>
+        <div class="detail-item">
+            <label>Default Salesperson</label>
+            <span>{{ seller.default_salesperson or '-' }}</span>
+        </div>
+        <div class="detail-item">
+            <label>Phone</label>
+            <span>{{ seller.phone or '-' }}</span>
+        </div>
+        <div class="detail-item">
+            <label>Email</label>
+            <span>{{ seller.email or '-' }}</span>
+        </div>
+    </div>
+    {% if seller.notes %}
+    <div class="detail-item full-width">
+        <label>Notes</label>
+        <p>{{ seller.notes }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<div class="detail-card">
+    <div class="card-header">
+        <h2>Addresses</h2>
+        <a href="{{ url_for('addresses_create') }}?seller_company_id={{ seller.id }}" class="btn btn-sm btn-primary">Add Address</a>
+    </div>
+    
+    {% if seller.addresses %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Label</th>
+                <th>Address</th>
+                <th>City/State/Zip</th>
+                <th>Country</th>
+                <th>Type</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for address in seller.addresses %}
+            <tr>
+                <td>
+                    <strong>{{ address.label or address.name }}</strong>
+                    {% if address.is_default %}<span class="badge badge-success">Default</span>{% endif %}
+                </td>
+                <td>{{ address.address }}</td>
+                <td>{{ address.city }}, {{ address.state }} {{ address.zip_code }}</td>
+                <td><span class="badge">{{ address.country }}</span></td>
+                <td>{{ address.address_type }}</td>
+                <td class="actions">
+                    <a href="{{ url_for('addresses_edit', address_id=address.id) }}" class="btn btn-sm btn-primary">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p class="empty-state">
+        No addresses yet. 
+        <a href="{{ url_for('addresses_create') }}">Add an address</a> to use this seller in BOL generation.
+    </p>
+    {% endif %}
+</div>
+{% endblock %}

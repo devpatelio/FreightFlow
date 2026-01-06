@@ -273,6 +273,192 @@ def customers_delete(customer_id):
 
 
 # ============================================================================
+# ADDRESS ROUTES
+# ============================================================================
+
+@app.route('/addresses')
+def addresses_list():
+    """List all addresses"""
+    seller_addresses = supabase.list_seller_addresses()
+    customers = supabase.list_accounts()
+    
+    # Get addresses for each customer
+    customer_addresses = []
+    for customer in customers:
+        addrs = supabase.list_customer_addresses(customer['id'])
+        for addr in addrs:
+            addr['customer'] = customer
+            customer_addresses.append(addr)
+    
+    return render_template('addresses/list.html', 
+                         seller_addresses=seller_addresses,
+                         customer_addresses=customer_addresses)
+
+
+@app.route('/addresses/create', methods=['GET', 'POST'])
+def addresses_create():
+    """Create new address"""
+    if request.method == 'POST':
+        try:
+            address = supabase.create_address(
+                name=request.form.get('name'),
+                address=request.form.get('address'),
+                city=request.form.get('city'),
+                state=request.form.get('state'),
+                zip_code=request.form.get('zip_code'),
+                country=request.form.get('country', 'USA'),
+                phone=request.form.get('phone') or None,
+                email=request.form.get('email') or None,
+                address_type=request.form.get('address_type', 'shipping'),
+                account_id=request.form.get('account_id') or None,
+                seller_company_id=request.form.get('seller_company_id') or None,
+                is_default=request.form.get('is_default') == 'on',
+                label=request.form.get('label') or None
+            )
+            flash(f'Address "{address["name"]}" created successfully!', 'success')
+            return redirect(url_for('addresses_list'))
+        except Exception as e:
+            flash(f'Error creating address: {str(e)}', 'error')
+
+    customers = supabase.list_accounts()
+    seller_companies = supabase.list_seller_companies()
+    return render_template('addresses/create.html', 
+                         customers=customers,
+                         seller_companies=seller_companies)
+
+
+@app.route('/addresses/<address_id>/edit', methods=['GET', 'POST'])
+def addresses_edit(address_id):
+    """Edit existing address"""
+    address = supabase.get_address(address_id)
+    if not address:
+        flash('Address not found', 'error')
+        return redirect(url_for('addresses_list'))
+
+    if request.method == 'POST':
+        try:
+            update_data = {
+                'name': request.form.get('name'),
+                'address': request.form.get('address'),
+                'city': request.form.get('city'),
+                'state': request.form.get('state'),
+                'zip_code': request.form.get('zip_code'),
+                'country': request.form.get('country', 'USA'),
+                'phone': request.form.get('phone') or None,
+                'email': request.form.get('email') or None,
+                'address_type': request.form.get('address_type', 'shipping'),
+                'account_id': request.form.get('account_id') or None,
+                'seller_company_id': request.form.get('seller_company_id') or None,
+                'is_default': request.form.get('is_default') == 'on',
+                'label': request.form.get('label') or None
+            }
+
+            supabase.update_address(address_id, update_data)
+            flash(f'Address "{update_data["name"]}" updated successfully!', 'success')
+            return redirect(url_for('addresses_list'))
+        except Exception as e:
+            flash(f'Error updating address: {str(e)}', 'error')
+
+    customers = supabase.list_accounts()
+    seller_companies = supabase.list_seller_companies()
+    return render_template('addresses/edit.html', 
+                         address=address,
+                         customers=customers,
+                         seller_companies=seller_companies)
+
+
+@app.route('/addresses/<address_id>/delete', methods=['POST'])
+def addresses_delete(address_id):
+    """Delete address"""
+    if supabase.delete_address(address_id):
+        flash('Address deleted successfully!', 'success')
+    else:
+        flash('Failed to delete address', 'error')
+    return redirect(url_for('addresses_list'))
+
+
+# ============================================================================
+# SELLER COMPANY ROUTES
+# ============================================================================
+
+@app.route('/sellers')
+def sellers_list():
+    """List all seller companies"""
+    sellers = supabase.list_seller_companies()
+    return render_template('sellers/list.html', sellers=sellers)
+
+
+@app.route('/sellers/create', methods=['GET', 'POST'])
+def sellers_create():
+    """Create new seller company"""
+    if request.method == 'POST':
+        try:
+            seller = supabase.create_seller_company(
+                company_name=request.form.get('company_name'),
+                default_salesperson=request.form.get('default_salesperson') or None,
+                phone=request.form.get('phone') or None,
+                email=request.form.get('email') or None,
+                notes=request.form.get('notes') or None,
+                is_default=request.form.get('is_default') == 'on'
+            )
+            flash(f'Seller company "{seller["company_name"]}" created successfully!', 'success')
+            return redirect(url_for('sellers_list'))
+        except Exception as e:
+            flash(f'Error creating seller company: {str(e)}', 'error')
+
+    return render_template('sellers/create.html')
+
+
+@app.route('/sellers/<seller_id>/view')
+def sellers_view(seller_id):
+    """View seller company details with addresses"""
+    seller = supabase.get_seller_company(seller_id)
+    if not seller:
+        flash('Seller company not found', 'error')
+        return redirect(url_for('sellers_list'))
+
+    return render_template('sellers/view.html', seller=seller)
+
+
+@app.route('/sellers/<seller_id>/edit', methods=['GET', 'POST'])
+def sellers_edit(seller_id):
+    """Edit existing seller company"""
+    seller = supabase.get_seller_company(seller_id)
+    if not seller:
+        flash('Seller company not found', 'error')
+        return redirect(url_for('sellers_list'))
+
+    if request.method == 'POST':
+        try:
+            update_data = {
+                'company_name': request.form.get('company_name'),
+                'default_salesperson': request.form.get('default_salesperson') or None,
+                'phone': request.form.get('phone') or None,
+                'email': request.form.get('email') or None,
+                'notes': request.form.get('notes') or None,
+                'is_default': request.form.get('is_default') == 'on'
+            }
+
+            supabase.update_seller_company(seller_id, update_data)
+            flash(f'Seller company "{update_data["company_name"]}" updated successfully!', 'success')
+            return redirect(url_for('sellers_list'))
+        except Exception as e:
+            flash(f'Error updating seller company: {str(e)}', 'error')
+
+    return render_template('sellers/edit.html', seller=seller)
+
+
+@app.route('/sellers/<seller_id>/delete', methods=['POST'])
+def sellers_delete(seller_id):
+    """Delete seller company"""
+    if supabase.delete_seller_company(seller_id):
+        flash('Seller company deleted successfully!', 'success')
+    else:
+        flash('Failed to delete seller company', 'error')
+    return redirect(url_for('sellers_list'))
+
+
+# ============================================================================
 # TEMPLATE EDITOR ROUTES
 # ============================================================================
 
@@ -433,18 +619,86 @@ def po_review(doc_id):
     account_id = session.get('current_account_id')
     customer = supabase.get_account_by_id(account_id) if account_id else None
 
-    # Generate BOL and Packing Slip data using AI
-    try:
-        bol_data = doc_manager.generate_bol_from_po(po_document_id=doc_id, save_to_db=False)
-        ps_data = doc_manager.generate_packing_slip_from_po(po_document_id=doc_id, save_to_db=False)
-    except Exception as e:
-        flash(f'Error generating documents: {str(e)}', 'warning')
-        bol_data = {}
-        ps_data = {}
+    # Get seller companies and their addresses for selection
+    seller_companies = supabase.list_seller_companies()
+    default_seller = supabase.get_default_seller_company()
+    
+    # Get customer addresses if customer exists
+    customer_addresses = []
+    if customer:
+        customer_addresses = supabase.list_customer_addresses(customer['id'])
+
+    # Generate next BOL number based on customer's PO count
+    next_bol_number = ""
+    if account_id:
+        next_bol_number = supabase.get_next_bol_number(account_id)
+
+    # Try to get cached generated data first
+    cached_data = supabase.get_generated_data(doc_id)
+    bol_data = cached_data.get('bol_data')
+    ps_data = cached_data.get('packing_slip_data')
+    
+    # Generate BOL and Packing Slip data using AI only if not cached
+    if not bol_data or not ps_data:
+        try:
+            if not bol_data:
+                print("🔄 Generating BOL data (not cached)")
+                bol_data = doc_manager.generate_bol_from_po(po_document_id=doc_id, save_to_db=False)
+            else:
+                print("✓ Using cached BOL data")
+                
+            if not ps_data:
+                print("🔄 Generating Packing Slip data (not cached)")
+                ps_data = doc_manager.generate_packing_slip_from_po(po_document_id=doc_id, save_to_db=False)
+            else:
+                print("✓ Using cached Packing Slip data")
+            
+            # Override BOL number with our calculated one
+            if next_bol_number:
+                bol_data['bol_number'] = next_bol_number
+                
+            # If we have a default seller, use their ship_from address
+            if default_seller and default_seller.get('addresses'):
+                # Find default address or use first one
+                seller_address = None
+                for addr in default_seller.get('addresses', []):
+                    if addr.get('is_default'):
+                        seller_address = addr
+                        break
+                if not seller_address and default_seller.get('addresses'):
+                    seller_address = default_seller['addresses'][0]
+                
+                if seller_address:
+                    bol_data['ship_from'] = {
+                        'name': seller_address.get('name') or default_seller.get('company_name'),
+                        'address': seller_address.get('address'),
+                        'city': seller_address.get('city'),
+                        'state': seller_address.get('state'),
+                        'zip_code': seller_address.get('zip_code'),
+                        'country': seller_address.get('country', 'USA'),
+                        'phone': seller_address.get('phone') or default_seller.get('phone'),
+                        'email': seller_address.get('email') or default_seller.get('email')
+                    }
+                    ps_data['salesperson'] = default_seller.get('default_salesperson', '')
+            
+            # Store generated data in Supabase for future use
+            supabase.store_generated_data(doc_id, bol_data=bol_data, packing_slip_data=ps_data)
+            print(f"✓ Stored generated data in PO document (doc_id: {doc_id})")
+            
+        except Exception as e:
+            flash(f'Error generating documents: {str(e)}', 'warning')
+            bol_data = {}
+            ps_data = {}
+    else:
+        print(f"✓ Using fully cached data from PO document (doc_id: {doc_id})")
 
     return render_template('po/review.html',
                          doc=doc,
                          customer=customer,
+                         customer_addresses=customer_addresses,
+                         seller_companies=seller_companies,
+                         default_seller=default_seller,
+                         next_bol_number=next_bol_number,
                          bol_data=json.dumps(bol_data, indent=2, default=str),
                          ps_data=json.dumps(ps_data, indent=2, default=str))
 
@@ -455,15 +709,71 @@ def po_generate(doc_id):
     try:
         # Check if user wants to use form schemas
         use_schema = request.form.get('use_schema', 'true').lower() == 'true'
+        
+        # Get selected ship_from address
+        ship_from_address_id = request.form.get('ship_from_address_id')
+        ship_to_address_id = request.form.get('ship_to_address_id')
+        
+        # Build address overrides
+        address_overrides = {}
+        
+        if ship_from_address_id:
+            ship_from_addr = supabase.get_address(ship_from_address_id)
+            if ship_from_addr:
+                address_overrides['ship_from'] = {
+                    'name': ship_from_addr.get('name'),
+                    'address': ship_from_addr.get('address'),
+                    'city': ship_from_addr.get('city'),
+                    'state': ship_from_addr.get('state'),
+                    'zip_code': ship_from_addr.get('zip_code'),
+                    'country': ship_from_addr.get('country', 'USA'),
+                    'phone': ship_from_addr.get('phone'),
+                    'email': ship_from_addr.get('email')
+                }
+        
+        if ship_to_address_id:
+            ship_to_addr = supabase.get_address(ship_to_address_id)
+            if ship_to_addr:
+                address_overrides['ship_to'] = {
+                    'name': ship_to_addr.get('name'),
+                    'address': ship_to_addr.get('address'),
+                    'city': ship_to_addr.get('city'),
+                    'state': ship_to_addr.get('state'),
+                    'zip_code': ship_to_addr.get('zip_code'),
+                    'country': ship_to_addr.get('country', 'USA'),
+                    'phone': ship_to_addr.get('phone'),
+                    'email': ship_to_addr.get('email')
+                }
+        
+        # Get account_id for BOL number generation
+        account_id = session.get('current_account_id')
+        bol_number_override = None
+        if account_id:
+            bol_number_override = supabase.get_next_bol_number(account_id)
 
-        # Generate filled documents
+        # Get cached generated data to avoid duplicate AI calls
+        cached_data = supabase.get_generated_data(doc_id)
+        cached_bol_data = cached_data.get('bol_data')
+        cached_ps_data = cached_data.get('packing_slip_data')
+        
+        if cached_bol_data:
+            print(f"✓ Using cached BOL data from review step (saving AI call)")
+        if cached_ps_data:
+            print(f"✓ Using cached Packing Slip data from review step (saving AI call)")
+
+        # Generate filled documents with address overrides and cached data
         bol_result = doc_manager.generate_and_fill_bol(
             po_document_id=doc_id,
-            use_saved_schema=use_schema
+            use_saved_schema=use_schema,
+            address_overrides=address_overrides,
+            bol_number_override=bol_number_override,
+            bol_data=cached_bol_data  # Pass cached data to skip AI generation
         )
         ps_result = doc_manager.generate_and_fill_packing_slip(
             po_document_id=doc_id,
-            use_saved_schema=use_schema
+            use_saved_schema=use_schema,
+            address_overrides=address_overrides,
+            packing_slip_data=cached_ps_data  # Pass cached data to skip AI generation
         )
 
         # Extract filenames and paths

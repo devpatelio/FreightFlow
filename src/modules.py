@@ -59,7 +59,6 @@ class WarehouseCarrier(str, Enum):
     SECONDARY = "Secondary Warehouse"
     CUSTOM = "Custom"
 
-
 # ============================================================================
 # BASE CLASSES
 # ============================================================================
@@ -107,7 +106,7 @@ class Product:
     weight: Optional[float] = None
     
     def __str__(self):
-        return f"{self.name} - {self.description}"
+        return f"{self.name}, {self.description}, {self.item_number}, {self.un_code}, {self.handling_unit}, {self.package}, {self.weight}"
 
 
 # ============================================================================
@@ -189,12 +188,14 @@ class BillOfLading:
     
     # Financial
     cod_amount: Optional[float] = None
-    
+    po_number: Optional[str] = None
+    order_number: Optional[str] = None
+    customer_order_number: Optional[str] = None
     # Notes
     special_instructions: Optional[str] = None
     
     def __str__(self):
-        return f"BOL {self.bol_number}"
+        return f"BOL {self.bol_number}, {self.bol_date}, Ship From {self.ship_from}, Ship To {self.ship_to}, Bill To {self.bill_to}, Products {self.products}, Orders {self.orders}, Carrier {self.carrier_name}, COD Amount {self.cod_amount}, PO Number {self.po_number}, Order Number {self.order_number}, Customer Order Number {self.customer_order_number}, Special Instructions {self.special_instructions}"
 
 
 # ============================================================================
@@ -203,82 +204,82 @@ class BillOfLading:
 
 @dataclass
 class PackingSlipItem:
-    """Single item on a packing slip"""
-    item_number: str
-    product_description: str
-    quantity: int
-    unit: str = "each"
+    """Single line item on a packing slip"""
+    item_number: str                    # Item #
+    description: str                    # Keys, Codes, Names, Percentages, Units, etc.
+    order_qty: float                    # Order QTY
+    ship_qty: float                     # Ship QTY
+    total: float                        # Total (usually ship_qty * unit_price or just quantity)
+    
+    def __str__(self):
+        return f"{self.item_number}: {self.description} (Order: {self.order_qty}, Ship: {self.ship_qty}, Total: {self.total})"
 
 
 @dataclass
 class PackingSlip:
-    """Packing Slip document"""
-    # Dates
+    """Packing Slip document - Simplified"""
+    # Header Info
     date: date = field(default_factory=date.today)
-    order_date: Optional[date] = None
-    packing_date: Optional[date] = None
-    
-    # Identification
-    customer_id: str = ""
-    purchase_order: str = ""
-    
-    # People
+    customer_id: str = ""               # Customer ID (same as customer name)
     salesperson: str = ""
-    checked_by: Optional[str] = None
     
-    # Addresses
-    ship_to: Optional[Address] = None
-    shipping_address: Optional[Address] = None  # Alternative shipping address if different
+    # Bill To - Leave blank unless specified otherwise
+    bill_to: Optional[Address] = None
     
-    # Items
+    # Ship To - Name of Company Plant
+    ship_to: Optional[Address] = None   # Company Name, Street Address, City/State/Zip, Country
+    
+    # Order Info
+    order_date: Optional[date] = None
+    order_number: str = ""              # Order #
+    purchase_order_number: str = ""     # Purchase Order #
+    customer_contact: str = ""          # Customer Contact
+    
+    # Line Items
     items: List[PackingSlipItem] = field(default_factory=list)
     
-    # Totals
-    total_quantity: int = 0
-    total_boxes: int = 0
-    
-    # Notes
-    special_notes: Optional[str] = None
-    
     def __str__(self):
-        return f"Packing Slip - {self.customer_id} PO: {self.purchase_order}"
+        return f"Packing Slip - {self.customer_id} PO: {self.purchase_order_number}"
 
 
-# ============================================================================
-# DATA STORE CLASSES (for customer/product management)
-# ============================================================================
 
 @dataclass
 class Buyer:
-    """Buyer contact for an account"""
-    id: str
+    """Buyer contact information"""
     name: str
-    phone: Optional[str] = None
     email: Optional[str] = None
+    phone: Optional[str] = None
     title: Optional[str] = None
-    notes: Optional[str] = None
+    
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'email': self.email,
+            'phone': self.phone,
+            'title': self.title
+        }
+    
+    @classmethod
+    def from_dict(cls, data):
+        return cls(**data)
 
 
 @dataclass
 class SalesPerson:
-    """Sales team member"""
-    id: str
+    """Sales person information"""
     name: str
-    phone: Optional[str] = None
     email: Optional[str] = None
-    employee_id: Optional[str] = None
-    notes: Optional[str] = None
-
+    phone: Optional[str] = None
+    title: Optional[str] = None
+    
     def to_dict(self):
         return {
-            'id': self.id,
             'name': self.name,
-            'phone': self.phone,
             'email': self.email,
-            'employee_id': self.employee_id,
-            'notes': self.notes
+            'phone': self.phone,
+            'title': self.title
         }
-
+    
     @classmethod
     def from_dict(cls, data):
         return cls(**data)

@@ -1,178 +1,126 @@
 PACKING SLIP DOCUMENT FILLING PROMPT TEMPLATE
 ==============================================
 
-You are an expert logistics document processor. Your task is to extract information from the provided source documents and fill out a Packing Slip form accurately and completely.
+You are an expert logistics document processor. Your task is to extract information from the provided source documents and fill out a Packing Slip form accurately.
 
-## REQUIRED INFORMATION TO EXTRACT:
+## REQUIRED FIELDS TO EXTRACT:
 
-### 1. DATES
-- Date: [Extract packing slip date or use current date]
-- Order Date: [Extract original order/PO date]
-- Packing Date: [Extract date items were packed, may be same as Date]
+### 1. HEADER
+- Date: [Current date or document date in YYYY-MM-DD format]
+- Customer ID: [Customer name/company name - this IS the customer identifier]
+- Salesperson: [Sales representative name]
 
-### 2. IDENTIFICATION
-- Customer ID: [Extract customer identifier/account number]
-- Purchase Order Number: [Extract PO number]
+### 2. BILL TO
+- Leave BLANK unless explicitly specified in the source document
+- Only populate if document shows a separate billing address
 
-### 3. PEOPLE
-- Salesperson: [Extract sales representative name]
-- Checked By: [Extract name of person who verified packing]
+### 3. SHIP TO (Name of Company Plant)
+- Company Name: [Recipient company/plant name]
+- Street Address: [Complete street address]
+- City/State/Zip Code: [City, State ZIP format]
+- Country: [Country, default: USA]
 
-### 4. SHIPPING ADDRESSES
+### 4. ORDER INFORMATION
+- Order Date: [Date the order was placed]
+- Order #: [Internal order number if available]
+- Purchase Order #: [Customer's PO number]
+- Customer Contact: [Name of customer contact person]
 
-#### Ship To Address (Primary destination)
-- Company Name: [Extract recipient company name]
-- Street Address: [Extract complete street address]
-- City: [Extract city]
-- State: [Extract state/province]
-- ZIP Code: [Extract postal code]
-- Country: [Extract country, default: USA]
-- Phone: [Extract phone number if available]
+IMPORTANT (DO NOT MISS THESE):
+- You MUST always return `order_date`, `purchase_order_number`, and `customer_contact` when they exist anywhere in the source document.
+- If a value is present in the source, DO NOT output null for it.
+- `order_number` is the only one that may be null if it truly does not exist in the source.
 
-#### Shipping Address (If different from Ship To)
-- Company Name: [Extract if different shipping location specified]
-- Street Address: [Extract complete street address]
-- City: [Extract city]
-- State: [Extract state/province]
-- ZIP Code: [Extract postal code]
-- Country: [Extract country]
-- Phone: [Extract phone number]
-
-Note: If shipping address is not explicitly different, leave as null.
-
-### 5. ITEMS (For each product/line item)
-For each item being shipped, extract:
-- Item Number: [Extract item/SKU/product code]
-- Product Description: [Extract detailed product description including specifications]
-- Quantity: [Extract quantity being shipped]
-- Unit: [Extract unit of measure: each, box, kg, lb, etc.]
-
-### 6. TOTALS
-- Total Quantity: [Calculate total quantity of all items]
-- Total Boxes/Packages: [Count total number of boxes/packages being shipped]
-
-### 7. NOTES
-- Special Notes: [Extract any handling instructions, special requirements, or important information]
+### 5. LINE ITEMS
+For each item, extract:
+- Item #: [Item number/SKU/product code]
+- Description: [Keys, Codes, Names, Percentages, Units, and any relevant product details]
+- Order QTY: [Quantity originally ordered]
+- Ship QTY: [Quantity being shipped]
+- Total: [Total for this line - typically the ship quantity or calculated total]
 
 ## OUTPUT FORMAT:
 
-Return the extracted information in valid JSON format matching the PackingSlip class structure:
+Return the extracted information in valid JSON format:
 
 ```json
 {
   "date": "2024-12-26",
-  "order_date": "2024-12-20",
-  "packing_date": "2024-12-26",
-  "customer_id": "CUST-001",
-  "purchase_order": "PO-12345",
+  "customer_id": "Solenis LLC",
   "salesperson": "John Smith",
-  "checked_by": "Jane Doe",
+  "bill_to": null,
   "ship_to": {
-    "name": "Customer Company Inc",
-    "address": "456 Oak Avenue",
+    "name": "Solenis Plant - Burlington",
+    "address": "456 Industrial Drive",
     "city": "Burlington",
     "state": "WI",
     "zip_code": "53105",
-    "country": "USA",
-    "phone": "262-806-7169",
-    "email": null
+    "country": "USA"
   },
-  "shipping_address": null,
+  "order_date": "2024-12-20",
+  "order_number": "SO-2024-001",
+  "purchase_order_number": "PO-4535119724",
+  "customer_contact": "Jane Doe",
   "items": [
     {
-      "item_number": "ITEM-001",
-      "product_description": "Chemical Product XYZ - Industrial Grade, 99% purity",
-      "quantity": 2,
-      "unit": "IBC"
+      "item_number": "HC-1001",
+      "description": "Sodium Hydroxide 50% - Industrial Grade, Bulk IBC",
+      "order_qty": 2000,
+      "ship_qty": 2000,
+      "total": 2000
     },
     {
-      "item_number": "ITEM-002",
-      "product_description": "Additive ABC - 25kg bags",
-      "quantity": 10,
-      "unit": "bags"
+      "item_number": "HC-1002",
+      "description": "Polymer Additive XR-200 - 25kg bags, 99.5% purity",
+      "order_qty": 500,
+      "ship_qty": 500,
+      "total": 500
     }
-  ],
-  "total_quantity": 12,
-  "total_boxes": 12,
-  "special_notes": "Fragile - Handle with care. Keep away from heat sources."
+  ]
 }
 ```
 
 ## EXTRACTION GUIDELINES:
 
-1. **Item Details**: 
-   - Extract complete product descriptions including grade, purity, specifications
-   - Include packaging information in the description (e.g., "25kg bags")
-   - Capture all technical specifications mentioned
+1. **Customer ID**: 
+   - This is the customer/company NAME, not just an ID code
+   - Extract the full company name as the identifier
 
-2. **Quantities**:
-   - Extract exact quantities being shipped
-   - Note the unit of measure (pieces, boxes, bags, IBCs, kg, lb, etc.)
-   - Calculate totals accurately
+2. **Bill To**:
+   - Leave as null unless the document explicitly specifies a billing address
+   - Only populate if different from standard customer billing
 
-3. **Date Handling**:
-   - Use ISO format (YYYY-MM-DD) for all dates
-   - If packing_date is not specified, use the same as date
-   - Order date should reflect when the order was originally placed
+3. **Ship To**:
+   - This is the delivery destination (plant/facility name)
+   - Include complete address details (street address, city/state/zip code, company name, country)
 
-4. **Customer Information**:
-   - Extract customer ID/account number exactly as shown
-   - Match PO number exactly from source document
-   - Verify salesperson name spelling
+4. **Item Description**:
+   - Include all relevant details: product name, grade, concentration, packaging
+   - Capture any codes, percentages, units mentioned
+   - Example: "Polymer XYZ-100 - 45% active, Technical Grade, 1000kg IBC"
 
-5. **Shipping Addresses**:
-   - ship_to: Always extract the primary recipient/destination address
-   - shipping_address: Only populate if document explicitly shows a different shipping location
-   - Include complete address details (name, street, city, state, zip, country, phone)
-   - Look for phrases like "Ship To:", "Deliver To:", "Please Deliver To:", "Shipping Address:"
-   - If only one address is mentioned, put it in ship_to and leave shipping_address as null
+5. **Quantities**:
+   - Order QTY: What was originally ordered
+   - Ship QTY: What is actually being shipped (may differ from order)
+   - Total: Usually equals Ship QTY, or a calculated amount
 
-6. **Verification**:
-   - Include "Checked By" name if document shows who verified the packing
-   - Leave as null if not specified
+6. **Dates**:
+   - Use ISO format (YYYY-MM-DD)
+   - If order_date not found, use null
 
-7. **Special Notes**:
-   - Extract ALL special instructions
-   - Include handling requirements (fragile, temperature, orientation)
-   - Include delivery requirements or restrictions
-   - Include regulatory or compliance notes
-
-8. **Totals Calculation**:
-   - total_quantity: Sum of all item quantities
-   - total_boxes: Count of total packages/containers being shipped
-   - Verify calculations are accurate
-
-## ITEM DESCRIPTION BEST PRACTICES:
-
-When extracting product descriptions, include:
-- Product name
-- Grade/Type (Industrial, Food Grade, Technical, etc.)
-- Purity/Concentration (if applicable)
-- Physical form (Liquid, Powder, Granular, etc.)
-- Packaging details (Bulk, Bottled, Bagged, etc.)
-- Any technical specifications mentioned
-- Certifications (if mentioned)
-
-Example good descriptions:
-- "Sodium Hydroxide - 50% Solution, Industrial Grade, in IBC containers"
-- "Polymer Resin XR-200 - White Powder, 99.5% purity, in 25kg paper bags"
-- "Lubricating Oil - SAE 10W-30, Synthetic Blend, in 208L drums"
-
-## VALIDATION CHECKS:
+## VALIDATION:
 
 Before submitting, verify:
-- [ ] All item numbers are present and correctly formatted
-- [ ] Product descriptions are complete and detailed
-- [ ] Quantities match source documents
-- [ ] Units are clearly specified for each item
-- [ ] Total quantity equals sum of individual quantities
-- [ ] Total boxes count is accurate
-- [ ] All dates are in correct format
-- [ ] Customer ID and PO number match source documents
-- [ ] Ship To address is complete and accurate
-- [ ] Shipping Address is only populated if explicitly different from Ship To
-- [ ] Special notes capture all important information
+- [ ] Customer ID is the company name
+- [ ] Ship To address is complete and includes the street address, company name, city/state/zip code and country
+- [ ] Bill To is null unless explicitly specified
+- [ ] All items have Item #, Description, Order QTY, Ship QTY, Total
+- [ ] Purchase Order # matches source document
+- [ ] Salesperson name is extracted if available
+- [ ] Order Date is present if found in the source (not null)
+- [ ] Purchase Order Number is present if found in the source (not null)
+- [ ] Customer Contact is present if found in the source (not null)
+- [ ] Order # is present if found in the source, otherwise null
 
 ## SOURCE DOCUMENTS TO PROCESS:
-[Insert Purchase Order, warehouse picking list, or other source materials here]
-
+[Insert Purchase Order or source materials here]
