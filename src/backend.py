@@ -940,18 +940,18 @@ Please extract the information and return ONLY a valid JSON object matching the 
                 
                 # Convert blocks to dicts
                 for block in chunk.blocks:
-                    print(block)
+                    # Access block attributes using dot notation (Reducto objects)
                     block_dict = {
-                        "type": block['type'],
-                        "content": block['content'],
+                        "type": block.type if hasattr(block, 'type') else None,
+                        "content": block.content if hasattr(block, 'content') else None,
                         "bbox": {
-                            "page": block['bbox']['page'],
-                            "left": block['bbox']['left'],
-                            "top": block['bbox']['top'],
-                            "width": block['bbox']['width'],
-                            "height": block['bbox']['height']
-                        } if 'bbox' in block else None,
-                        "confidence": block['confidence'] if 'confidence' in block else None
+                            "page": block.bbox.page,
+                            "left": block.bbox.left,
+                            "top": block.bbox.top,
+                            "width": block.bbox.width,
+                            "height": block.bbox.height
+                        } if hasattr(block, 'bbox') and block.bbox else None,
+                        "confidence": block.confidence if hasattr(block, 'confidence') else None
                     }
                     chunk_dict["blocks"].append(block_dict)
                 
