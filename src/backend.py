@@ -461,10 +461,14 @@ Please extract the information and return ONLY a valid JSON object matching the 
             "CUSTOMER CONTACT": as_str(fill_data.get("customer_contact")),
         }
 
+        ship_from = fill_data.get("ship_from") or {}
         ship_to = fill_data.get("ship_to") or {}
         bill_to = fill_data.get("bill_to") or {}
         has_bill_to = isinstance(fill_data.get("bill_to"), dict) and any((fill_data.get("bill_to") or {}).values())
 
+        ship_from_city_state_zip = " ".join(
+            [as_str(ship_from.get("city")).strip(), as_str(ship_from.get("state")).strip(), as_str(ship_from.get("zip_code")).strip()]
+        ).strip()
         ship_city_state_zip = " ".join(
             [as_str(ship_to.get("city")).strip(), as_str(ship_to.get("state")).strip(), as_str(ship_to.get("zip_code")).strip()]
         ).strip()
@@ -519,6 +523,18 @@ Please extract the information and return ONLY a valid JSON object matching the 
                 continue
 
             # Address subfields
+            if key.startswith("SHIP FROM:"):
+                sub = key.replace("SHIP FROM:", "", 1).strip()
+                if sub in ("COMPANY NAME", "COMPANY NAME:"):
+                    field["value"] = as_str(ship_from.get("name"))
+                elif sub in ("STREET ADDRESS", "STREET ADDRESS:"):
+                    field["value"] = as_str(ship_from.get("address"))
+                elif sub in ("CITY/STATE/ZIP CODE", "CITY/STATE/ZIP CODE:"):
+                    field["value"] = ship_from_city_state_zip
+                elif sub in ("COUNTRY", "COUNTRY:"):
+                    field["value"] = as_str(ship_from.get("country"))
+                continue
+
             if key.startswith("SHIP TO:"):
                 sub = key.replace("SHIP TO:", "", 1).strip()
                 if sub in ("COMPANY NAME", "COMPANY NAME:"):
@@ -658,6 +674,24 @@ Please extract the information and return ONLY a valid JSON object matching the 
                 instructions.append(f"BILL TO: Country: {bill_to['country']}")
         else:
             instructions.append("Leave all BILL TO fields blank")
+        
+        instructions.append("")
+        
+        # SHIP FROM SECTION
+        instructions.append("SHIP FROM SECTION:")
+        ship_from = data.get('ship_from')
+        if ship_from and isinstance(ship_from, dict):
+            if ship_from.get('name'):
+                instructions.append(f"SHIP FROM: Company Name: {ship_from['name']}")
+            if ship_from.get('address'):
+                instructions.append(f"SHIP FROM: Street Address: {ship_from['address']}")
+            city = ship_from.get('city', '')
+            state = ship_from.get('state', '')
+            zip_code = ship_from.get('zip_code', '')
+            if city or state or zip_code:
+                instructions.append(f"SHIP FROM: City/State/Zip Code: {city} {state} {zip_code}".strip())
+            if ship_from.get('country'):
+                instructions.append(f"SHIP FROM: Country: {ship_from['country']}")
         
         instructions.append("")
         
