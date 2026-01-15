@@ -222,22 +222,25 @@ class PackingSlip:
     date: date = field(default_factory=date.today)
     customer_id: str = ""               # Customer ID (same as customer name)
     salesperson: str = ""
-    
+
+    # Ship From - Hanson Chemicals address
+    ship_from: Optional[Address] = None
+
     # Bill To - Leave blank unless specified otherwise
     bill_to: Optional[Address] = None
-    
+
     # Ship To - Name of Company Plant
     ship_to: Optional[Address] = None   # Company Name, Street Address, City/State/Zip, Country
-    
+
     # Order Info
     order_date: Optional[date] = None
     order_number: str = ""              # Order #
     purchase_order_number: str = ""     # Purchase Order #
     customer_contact: str = ""          # Customer Contact
-    
+
     # Line Items
     items: List[PackingSlipItem] = field(default_factory=list)
-    
+
     def __str__(self):
         return f"Packing Slip - {self.customer_id} PO: {self.purchase_order_number}"
 

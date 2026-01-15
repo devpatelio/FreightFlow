@@ -20,7 +20,13 @@ You are an expert logistics document processor. Your task is to extract informat
 - City/State/Zip Code: [City, State ZIP format]
 - Country: [Country, default: USA]
 
-### 4. ORDER INFORMATION
+### 4. SHIP FROM (Name of the Hanson Chemicals Address Provided)
+- Company Name: [Company/source name]
+- Street Address: [Complete street address]
+- City/State/Zip Code: [City, State ZIP format]
+- Country: [Country]
+
+### 5. ORDER INFORMATION
 - Order Date: [Date the order was placed]
 - Order #: [Internal order number if available]
 - Purchase Order #: [Customer's PO number]

@@ -1458,7 +1458,7 @@ class DocumentManager:
             form_schema_path: Path to saved form schema JSON (optional)
             use_saved_schema: Whether to use schema saved in database (default: True)
             output_filename: Name for the output file (auto-generated if not provided)
-            address_overrides: Dictionary with 'ship_to' address override
+            address_overrides: Dictionary with 'ship_from' and/or 'ship_to' address overrides
             packing_slip_data: Pre-generated Packing Slip data (if provided, skips AI generation)
         
         Returns:
@@ -1481,6 +1481,9 @@ class DocumentManager:
         
         # Apply address overrides if provided
         if address_overrides:
+            if 'ship_from' in address_overrides:
+                ps_data['ship_from'] = address_overrides['ship_from']
+                print(f"✓ Applied ship_from address override: {address_overrides['ship_from'].get('name')}")
             if 'ship_to' in address_overrides:
                 ps_data['ship_to'] = address_overrides['ship_to']
                 print(f"✓ Applied ship_to address override: {address_overrides['ship_to'].get('name')}")
