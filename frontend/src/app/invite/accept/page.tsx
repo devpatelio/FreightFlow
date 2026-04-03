@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase'
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
-export default function InviteAcceptPage() {
+function InviteAccept() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const invitationId = searchParams.get('invitation_id')
@@ -100,5 +100,13 @@ export default function InviteAcceptPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+export default function InviteAcceptPage() {
+  return (
+    <Suspense>
+      <InviteAccept />
+    </Suspense>
   )
 }
