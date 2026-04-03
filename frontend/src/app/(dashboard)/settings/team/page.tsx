@@ -153,7 +153,7 @@ export default function TeamPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Role</Label>
-                  <Select value={inviteRole} onValueChange={setInviteRole}>
+                  <Select value={inviteRole} onValueChange={(v) => v && setInviteRole(v)}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="member">Member</SelectItem>
@@ -217,7 +217,7 @@ export default function TeamPage() {
                       </TableCell>
                       <TableCell>
                         {isOwner ? (
-                          <Select value={m.role} onValueChange={v => handleChangeRole(m.id, v)}>
+                          <Select value={m.role} onValueChange={v => v && handleChangeRole(m.id, v)}>
                             <SelectTrigger className="h-7 w-28">
                               <SelectValue />
                             </SelectTrigger>
