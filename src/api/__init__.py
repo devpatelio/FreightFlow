@@ -31,6 +31,7 @@ def create_app() -> Flask:
     from .routes.schemas import bp as schemas_bp
     from .routes.pipelines import bp as pipelines_bp
     from .routes.profiles import bp as profiles_bp
+    from .routes.auth import bp as auth_bp
 
     app.register_blueprint(customers_bp)
     app.register_blueprint(addresses_bp)
@@ -42,6 +43,7 @@ def create_app() -> Flask:
     app.register_blueprint(schemas_bp)
     app.register_blueprint(pipelines_bp)
     app.register_blueprint(profiles_bp)
+    app.register_blueprint(auth_bp)
 
     # Health check
     @app.route('/api/health')

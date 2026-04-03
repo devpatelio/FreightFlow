@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { createClient } from '@/lib/supabase'
+import { api } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -20,14 +20,10 @@ export default function ForgotPasswordPage() {
     setLoading(true)
     setError('')
 
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin
-    const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${siteUrl}/auth/callback?next=/reset-password`,
-    })
-
-    if (error) {
-      setError(error.message)
+    try {
+      await api.post('/api/auth/reset-password', { email })
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to send reset email')
       setLoading(false)
       return
     }
