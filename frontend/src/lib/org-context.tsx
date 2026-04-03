@@ -54,16 +54,16 @@ export function OrgProvider({ children }: { children: ReactNode }) {
         loading: false,
       })
 
-      if (!data.org_id || !data.organization?.onboarding_completed_at) {
+      // Only send users without any org membership to onboarding. Do not require
+      // onboarding_completed_at — legacy orgs often have it NULL while fully set up.
+      if (!data.org_id) {
         if (!pathname.startsWith('/onboarding')) {
           router.replace('/onboarding')
         }
       }
     } catch {
+      // API unreachable (wrong NEXT_PUBLIC_API_URL, CORS, etc.) must not look like "onboarding again".
       setState(prev => ({ ...prev, loading: false }))
-      if (!pathname.startsWith('/onboarding')) {
-        router.replace('/onboarding')
-      }
     }
   }
 
