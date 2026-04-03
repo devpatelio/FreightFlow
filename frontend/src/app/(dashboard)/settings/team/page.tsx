@@ -135,7 +135,7 @@ export default function TeamPage() {
         </div>
         {isAdmin && (
           <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
-            <DialogTrigger asChild>
+            <DialogTrigger className="inline-flex">
               <Button><UserPlus className="mr-2 h-4 w-4" />Invite Member</Button>
             </DialogTrigger>
             <DialogContent>
