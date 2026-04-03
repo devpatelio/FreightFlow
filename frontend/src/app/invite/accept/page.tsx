@@ -68,12 +68,8 @@ export default function InviteAcceptPage() {
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">Sign in or create an account to accept this invitation.</p>
               <div className="flex flex-col gap-2">
-                <Button asChild>
-                  <Link href={loginUrl}>Sign in to accept</Link>
-                </Button>
-                <Button variant="outline" asChild>
-                  <Link href={signupUrl}>Create an account</Link>
-                </Button>
+                <Button onClick={() => router.push(loginUrl)}>Sign in to accept</Button>
+                <Button variant="outline" onClick={() => router.push(signupUrl)}>Create an account</Button>
               </div>
             </div>
           )}
