@@ -7,10 +7,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { Loader2, Save, KeyRound } from 'lucide-react'
+import { Loader2, Save, KeyRound, TriangleAlert } from 'lucide-react'
 import { api } from '@/lib/api'
+import { useRouter } from 'next/navigation'
 
 export default function ProfilePage() {
+  const router = useRouter()
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(true)
@@ -21,6 +23,9 @@ export default function ProfilePage() {
   const [passwordSaving, setPasswordSaving] = useState(false)
   const [passwordError, setPasswordError] = useState('')
   const [passwordSaved, setPasswordSaved] = useState(false)
+  const [deleteConfirm, setDeleteConfirm] = useState('')
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   useEffect(() => {
     async function load() {
@@ -73,6 +78,20 @@ export default function ProfilePage() {
       setTimeout(() => setPasswordSaved(false), 2000)
     }
     setPasswordSaving(false)
+  }
+
+  async function handleDeleteAccount() {
+    setDeleting(true)
+    setDeleteError('')
+    try {
+      const supabase = createClient()
+      await api.delete('/api/profile/me')
+      await supabase.auth.signOut()
+      router.push('/login')
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Failed to delete account')
+      setDeleting(false)
+    }
   }
 
   const initials = displayName
@@ -183,6 +202,44 @@ export default function ProfilePage() {
             </Button>
             {passwordSaved && <span className="text-sm text-emerald-600">Password updated!</span>}
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border-destructive/40">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-destructive">
+            <TriangleAlert className="h-4 w-4" />
+            Danger Zone
+          </CardTitle>
+          <CardDescription>
+            Permanently delete your account and all associated data. This cannot be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {deleteError && (
+            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              {deleteError}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label htmlFor="deleteConfirm">
+              Type <span className="font-mono font-semibold">delete my account</span> to confirm
+            </Label>
+            <Input
+              id="deleteConfirm"
+              placeholder="delete my account"
+              value={deleteConfirm}
+              onChange={e => setDeleteConfirm(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="destructive"
+            disabled={deleteConfirm !== 'delete my account' || deleting}
+            onClick={handleDeleteAccount}
+          >
+            {deleting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+            Delete my account
+          </Button>
         </CardContent>
       </Card>
     </div>

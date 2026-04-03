@@ -28,6 +28,16 @@ def update_my_profile():
     return jsonify(profile)
 
 
+@bp.route('/me', methods=['DELETE'])
+@require_jwt
+def delete_my_account():
+    try:
+        db.delete_user_account(g.user_id)
+    except ValueError as e:
+        return jsonify({'error': {'code': 'FORBIDDEN', 'message': str(e)}}), 400
+    return jsonify({'ok': True})
+
+
 @bp.route('/resolve', methods=['POST'])
 @require_jwt
 def resolve_profiles():

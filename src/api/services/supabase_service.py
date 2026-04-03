@@ -152,6 +152,36 @@ def upsert_user_profile(user_id: str, data: Dict) -> Dict:
     return result.data[0]
 
 
+def delete_user_account(user_id: str) -> None:
+    """Delete all user data and remove the Supabase auth account.
+
+    Raises ValueError if the user is the owner of an org that has other members.
+    """
+    client = _get_client()
+
+    # Find orgs where this user is an owner
+    owned = client.table('org_members') \
+        .select('org_id').eq('user_id', user_id).eq('role', 'owner').execute().data or []
+
+    for row in owned:
+        org_id = row['org_id']
+        other_members = client.table('org_members') \
+            .select('id', count='exact').eq('org_id', org_id) \
+            .neq('user_id', user_id).execute()
+        if (other_members.count or 0) > 0:
+            raise ValueError(
+                'You are the owner of an organization that still has members. '
+                'Transfer ownership to another member before deleting your account.'
+            )
+
+    # Remove from all orgs
+    client.table('org_members').delete().eq('user_id', user_id).execute()
+    # Delete profile
+    client.table('user_profiles').delete().eq('user_id', user_id).execute()
+    # Delete the Supabase auth user (requires service role key)
+    client.auth.admin.delete_user(user_id)
+
+
 def get_user_profiles_by_ids(user_ids: List[str]) -> List[Dict]:
     if not user_ids:
         return []
