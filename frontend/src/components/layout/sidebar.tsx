@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
@@ -41,9 +42,7 @@ export function Sidebar() {
     <aside className="flex h-full w-64 flex-col border-r bg-background">
       <div className="flex h-16 items-center border-b px-6">
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-            FF
-          </div>
+          <Image src="/logo.png" alt="FreightFlow" width={32} height={32} className="rounded-lg" />
           <span className="text-lg font-semibold tracking-tight">FreightFlow</span>
         </Link>
       </div>

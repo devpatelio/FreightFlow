@@ -1,3 +1,5 @@
+import Image from 'next/image'
+
 export default function OnboardingLayout({
   children,
 }: {
@@ -8,9 +10,7 @@ export default function OnboardingLayout({
       <header className="border-b bg-background">
         <div className="mx-auto flex h-16 max-w-3xl items-center px-6">
           <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold text-sm">
-              FF
-            </div>
+            <Image src="/logo.png" alt="FreightFlow" width={32} height={32} className="rounded-lg" />
             <span className="text-lg font-semibold tracking-tight">FreightFlow</span>
           </div>
         </div>

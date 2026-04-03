@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import { createClient } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,9 +48,7 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground font-bold text-lg">
-            FF
-          </div>
+          <Image src="/logo.png" alt="FreightFlow" width={48} height={48} className="mx-auto mb-4 rounded-xl" />
           <CardTitle className="text-2xl">Create your account</CardTitle>
           <CardDescription>
             Sign up to start using FreightFlow
