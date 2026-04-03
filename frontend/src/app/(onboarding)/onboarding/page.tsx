@@ -13,6 +13,7 @@ import {
   ArrowRight, ArrowLeft, Loader2, Mail, Upload,
 } from 'lucide-react'
 import { api } from '@/lib/api'
+import { createClient } from '@/lib/supabase'
 
 type Step = 'org' | 'keys' | 'profile' | 'address' | 'templates'
 
@@ -224,11 +225,22 @@ export default function OnboardingPage() {
     }
   }
 
+  async function handleSignOut() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push('/login')
+  }
+
   return (
     <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Welcome to FreightFlow</h1>
-        <p className="text-muted-foreground mt-1">Let&apos;s get your organization set up</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Welcome to FreightFlow</h1>
+          <p className="text-muted-foreground mt-1">Let&apos;s get your organization set up</p>
+        </div>
+        <Button variant="ghost" size="sm" onClick={handleSignOut} className="text-muted-foreground">
+          Sign out
+        </Button>
       </div>
 
       {/* Step indicator */}
