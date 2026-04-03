@@ -153,17 +153,15 @@ function DocumentsContent() {
                           <div className="flex items-center gap-2">
                             {doc.created_by && (
                               <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-1.5">
-                                    <Avatar className="h-5 w-5">
-                                      <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-medium">
-                                        {userInitials(creator)}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                    <span className="text-xs text-muted-foreground">
-                                      {new Date(doc.created_at).toLocaleDateString()}
-                                    </span>
-                                  </div>
+                                <TooltipTrigger className="flex items-center gap-1.5">
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-medium">
+                                      {userInitials(creator)}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="text-xs text-muted-foreground">
+                                    {new Date(doc.created_at).toLocaleDateString()}
+                                  </span>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   Created by {creator?.display_name || 'Unknown'}
@@ -177,15 +175,13 @@ function DocumentsContent() {
                             )}
                             {showUpdater && (
                               <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <div className="flex items-center gap-1">
-                                    <span className="text-xs text-muted-foreground">·</span>
-                                    <Avatar className="h-5 w-5">
-                                      <AvatarFallback className="bg-orange-100 text-orange-700 text-[10px] font-medium">
-                                        {userInitials(updater)}
-                                      </AvatarFallback>
-                                    </Avatar>
-                                  </div>
+                                <TooltipTrigger className="flex items-center gap-1">
+                                  <span className="text-xs text-muted-foreground">·</span>
+                                  <Avatar className="h-5 w-5">
+                                    <AvatarFallback className="bg-orange-100 text-orange-700 text-[10px] font-medium">
+                                      {userInitials(updater)}
+                                    </AvatarFallback>
+                                  </Avatar>
                                 </TooltipTrigger>
                                 <TooltipContent>
                                   Last updated by {updater?.display_name || 'Unknown'} on {new Date(doc.updated_at).toLocaleDateString()}
