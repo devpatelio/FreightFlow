@@ -8,6 +8,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 export const metadata: Metadata = {
   title: "FreightFlow",
   description: "Automated logistics document management platform",
+  icons: { icon: "/logo_red.png" },
 };
 
 export default function RootLayout({

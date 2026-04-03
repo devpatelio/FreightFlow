@@ -42,7 +42,7 @@ export function Sidebar() {
     <aside className="flex h-full w-64 flex-col border-r bg-background">
       <div className="flex h-16 items-center border-b px-6">
         <Link href="/" className="flex items-center gap-2">
-          <Image src="/logo.png" alt="FreightFlow" width={32} height={32} className="rounded-lg" />
+          <Image src="/logo_black.png" alt="FreightFlow" width={32} height={32} className="rounded-lg" />
           <span className="text-lg font-semibold tracking-tight">FreightFlow</span>
         </Link>
       </div>
