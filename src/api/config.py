@@ -4,6 +4,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+IS_PRODUCTION = bool(os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('VERCEL'))
+
 
 class Config:
     SECRET_KEY = os.getenv('FLASK_SECRET_KEY', 'dev-secret-key-change-in-production')
@@ -16,7 +18,7 @@ class Config:
 
     CORS_ORIGINS = os.getenv('CORS_ORIGINS', 'http://localhost:3000').split(',')
 
-    if os.getenv('VERCEL'):
+    if IS_PRODUCTION:
         UPLOAD_FOLDER = Path('/tmp/uploads')
         EXPORT_FOLDER = Path('/tmp/export')
     else:
