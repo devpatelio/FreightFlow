@@ -69,6 +69,29 @@ def remove_org_member(org_id: str, member_id: str) -> None:
         .delete().eq('id', member_id).eq('org_id', org_id).execute()
 
 
+def send_invite_email(email: str, invitation_id: str) -> None:
+    """Send an invitation email via Supabase auth admin invite.
+
+    Uses invite_user_by_email which works for both new and existing users.
+    If the user is already registered Supabase may raise; we swallow that so
+    the invitation DB record is still usable via the onboarding pending-invites
+    flow.
+    """
+    from urllib.parse import quote
+    frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+    accept_path = quote(f"/invite/accept?invitation_id={invitation_id}")
+    accept_url = f"{frontend_url}/auth/callback?next={accept_path}"
+    try:
+        _get_client().auth.admin.invite_user_by_email(
+            email,
+            options={"redirect_to": accept_url},
+        )
+    except Exception:
+        # User may already exist; invitation is still recorded in DB and
+        # will surface in the onboarding pending-invites list.
+        pass
+
+
 def create_invitation(org_id: str, email: str, role: str, invited_by: str) -> Dict:
     from datetime import datetime, timedelta
     expires_at = (datetime.utcnow() + timedelta(days=7)).isoformat()

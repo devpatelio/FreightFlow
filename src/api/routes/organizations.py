@@ -145,6 +145,7 @@ def create_invitation():
 
     try:
         invitation = db.create_invitation(g.org_id, body.email, body.role, g.user_id)
+        db.send_invite_email(body.email, invitation['id'])
         return jsonify(invitation), 201
     except Exception as e:
         return jsonify({'error': {'code': 'INVITE_ERROR', 'message': str(e)}}), 500
