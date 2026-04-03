@@ -1,0 +1,44 @@
+---
+description: Project-wide coding conventions for FreightFlow
+globs:
+  - "**/*.py"
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.sql"
+---
+
+# FreightFlow Project Conventions
+
+## Python (Backend — src/api/)
+
+- Use Pydantic v2 BaseModel for all request/response types
+- Flask Blueprints for route organization, one Blueprint per resource
+- Service layer pattern: routes → services → Supabase/AI clients
+- All routes return JSON via `jsonify()`, never `render_template()`
+- Prefix all API routes with `/api/`
+- Use type hints on all function signatures
+- Naming: `snake_case` for functions, variables, files; `PascalCase` for classes
+
+## TypeScript (Frontend — frontend/)
+
+- Next.js App Router: `page.tsx`, `layout.tsx`, `loading.tsx`, `error.tsx`
+- Use `"use client"` only when needed (interactivity, hooks)
+- shadcn/ui as component base; extend with Tailwind utilities
+- All types in `frontend/src/lib/types.ts`
+- Use Supabase JS client for auth and direct reads; Flask API for pipeline operations
+
+## Database (Supabase)
+
+- `snake_case` for table and column names
+- UUID primary keys everywhere (never integer counters)
+- `org_id` on every tenant-scoped table
+- `created_at TIMESTAMPTZ DEFAULT now()` and `updated_at TIMESTAMPTZ DEFAULT now()` on all tables
+- RLS enabled on all tenant tables
+- Migrations numbered sequentially in `supabase/migrations/`
+
+## General
+
+- No hardcoded company data (no "Hanson Chemicals" references in new code)
+- No global API keys in production paths — use per-org BYOK from `org_api_keys`
+- No `session` state — API is stateless with JWT auth
+- Document non-obvious logic; don't comment the obvious
